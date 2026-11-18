@@ -1,0 +1,38 @@
+{
+  "interval_minutes": 5,
+  "output_file": "dashboard.json",
+  "accounts": [
+    {
+      "id": "blue_guardian",
+      "name": "Blue Guardian",
+      "terminal_path": "C:\\Program Files\\Blue Guardian MT5 Terminal\\terminal64.exe",
+      "start_balance": 5000,
+      "profit_target_pct": null,
+      "max_daily_loss_pct": null,
+      "max_drawdown_pct": null
+    },
+    {
+      "id": "leveraged",
+      "name": "Leveraged ONE",
+      "terminal_path": "C:\\MT5-Leveraged\\terminal64.exe",
+      "start_balance": 10000,
+      "profit_target_pct": null,
+      "max_daily_loss_pct": null,
+      "max_drawdown_pct": null
+    }
+  ],
+  "telenet": {
+    "enabled": true,
+    "every_minutes": 30,
+    "tool": "telenet_quota",
+    "command": null,
+    "args": [],
+    "cwd": null,
+    "env": {}
+  },
+  "strava": {
+    "enabled": true,
+    "every_minutes": 15,
+    "activities": 100
+  }
+}
