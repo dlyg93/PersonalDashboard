@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Persoonlijk dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b82f6'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --line: #262b36; --fg: #e8eaf0; --muted: #8b93a7;
+    --accent: #3b82f6; --good: #22c55e; --bad: #ef4444; --warn: #f59e0b; --bar-bg: #232835; --bar-muted: #3a4152;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f5f6f8; --panel: #ffffff; --line: #e3e6ec; --fg: #161a22; --muted: #667085; --bar-bg: #eceef2; --bar-muted: #c9ced8; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0; }
+  h2 { font-size: 17px; font-weight: 600; margin: 32px 0 4px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  .lede { margin: 10px 0 0; }
+  .btn { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 500; padding: 6px 12px; }
+  .alert { margin-top: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--warn); font-size: 14px; }
+  .alert.err { border-color: var(--bad); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; }
+  .card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .name { font-weight: 600; }
+  .big { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; margin: 4px 0; letter-spacing: -0.01em; }
+  dl.kv { display: grid; grid-template-columns: 1fr auto; gap: 3px 14px; font-size: 13px; font-variant-numeric: tabular-nums; margin: 10px 0 0; }
+  dl.kv dt { color: var(--muted); margin: 0; }
+  dl.kv dd { margin: 0; text-align: right; }
+  .good { color: var(--good); } .bad { color: var(--bad); }
+  .bar { height: 10px; border-radius: 5px; background: var(--bar-bg); overflow: hidden; margin: 10px 0; }
+  .bar > span { display: block; height: 100%; border-radius: 5px; background: var(--accent); }
+  .rule { margin-top: 10px; font-size: 13px; }
+  .rule .bar { height: 6px; margin: 4px 0 0; }
+  .spark, .chart { position: relative; }
+  .spark { height: 56px; margin-top: 10px; }
+  .chart { min-height: 170px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; margin-top: 14px; }
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; margin-top: 6px; }
+  th { text-align: left; color: var(--muted); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .num { text-align: right; }
+  .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+  .tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.25); border-radius: 8px; padding: 4px 8px; font-size: 12px; white-space: nowrap; z-index: 5; display: none; }
+  .tip b { display: block; }
+  svg text { fill: var(--muted); font-size: 11px; }
+  #login { text-align: center; padding: 70px 16px; }
+  #login p { color: var(--muted); max-width: 420px; margin: 12px auto 22px; }
+  .hidden { display: none !important; }
+</style>
+<script src="config.js"></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Persoonlijk dashboard</h1>
+    <div class="small muted">
+      <span id="updated"></span>
+      <button class="btn ghost hidden" id="logout" type="button">Uitloggen</button>
+    </div>
+  </header>
+
+  <section id="login">
+    <h2 style="margin-top:0">Inloggen</h2>
+    <p>Deze pagina leest je gegevens uit je eigen Google Drive. Zonder inloggen is er niets te zien.</p>
+    <button class="btn" id="loginBtn" type="button">Inloggen met Google</button>
+    <div id="loginMsg" class="small muted" style="margin-top:14px"></div>
+  </section>
+
+  <main id="app" class="hidden">
+    <p class="lede" id="lede"></p>
+    <div id="alert" class="alert hidden" role="status"></div>
+
+    <h2>Forex</h2>
+    <p class="sub">Uit MT5 op de Mac mini. Dag-P/L volgt de servertijd van de broker en telt open posities mee.</p>
+    <div class="grid" id="accounts"></div>
+    <div class="two">
+      <div class="card">
+        <div class="name">Open posities</div>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Account</th><th>Symbool</th><th>Richting</th><th class="num">Lots</th><th class="num">Open</th><th class="num">P/L</th></tr></thead>
+          <tbody id="positions"></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="name">Laatste gesloten trades</div>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Gesloten</th><th>Account</th><th>Symbool</th><th>Positie</th><th class="num">Lots</th><th class="num">Resultaat</th></tr></thead>
+          <tbody id="trades"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <h2>Telenet TV</h2>
+    <div class="grid">
+      <div class="card" id="telenet"></div>
+    </div>
+
+    <h2>Strava</h2>
+    <div class="grid">
+      <div class="card" id="week"></div>
+      <div class="card">
+        <div class="name">Gelopen km per week</div>
+        <div class="small muted">Laatste 8 weken, week start op maandag</div>
+        <div class="chart" id="weeks"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="name">Laatste activiteiten</div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Datum</th><th>Activiteit</th><th>Sport</th><th class="num">Km</th><th class="num">Minuten</th><th>Tempo</th></tr></thead>
+        <tbody id="acts"></tbody>
+      </table></div>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+  const CFG = window.DASHBOARD_CONFIG || {};
+  const SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+  let token = null, tokenExp = 0, tokenClient = null, timer = null, lastData = null, fileId = CFG.fileId;
+
+  // ---------- opmaak ----------
+  const money = (v, cur, signed) => {
+    if (v == null || isNaN(v)) return '—';
+    const s = new Intl.NumberFormat('nl-BE', {style: 'currency', currency: cur || 'USD'}).format(Math.abs(v));
+    return (v < 0 ? '−' : (signed && v > 0 ? '+' : '')) + s;
+  };
+  const num = (v, d = 0) => (v == null || isNaN(v)) ? '—' : new Intl.NumberFormat('nl-BE', {minimumFractionDigits: d, maximumFractionDigits: d}).format(v);
+  const pct = (v, signed) => (v == null || isNaN(v)) ? '—' : (v < 0 ? '−' : (signed && v > 0 ? '+' : '')) + new Intl.NumberFormat('nl-BE', {maximumFractionDigits: 1}).format(Math.abs(v)) + '%';
+  const when = (iso) => { const d = new Date(iso); return isNaN(d) ? '—' : d.toLocaleString('nl-BE', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'}); };
+  const day = (iso) => { const d = new Date(iso); return isNaN(d) ? '—' : d.toLocaleDateString('nl-BE', {weekday: 'short', day: 'numeric', month: 'short'}); };
+  const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const tone = (e, v) => { e.classList.toggle('good', v > 0); e.classList.toggle('bad', v < 0); return e; };
+  const $ = (id) => document.getElementById(id);
+
+  function tip(box) {
+    let t = box.querySelector(':scope > .tip');
+    if (!t) { t = el('div', 'tip'); box.appendChild(t); }
+    return {
+      show(lines, x, y) {
+        t.replaceChildren(...lines.map((l, i) => el(i ? 'span' : 'b', null, l)));
+        t.style.display = 'block';
+        t.style.left = Math.max(0, Math.min(box.clientWidth - t.offsetWidth, x - t.offsetWidth / 2)) + 'px';
+        t.style.top = Math.max(0, y - t.offsetHeight - 8) + 'px';
+      },
+      hide() { t.style.display = 'none'; }
+    };
+  }
+
+  // ---------- Google-login ----------
+  function initGoogle() {
+    if (!window.google || !google.accounts || !google.accounts.oauth2) { setTimeout(initGoogle, 200); return; }
+    if (!CFG.googleClientId || CFG.googleClientId.startsWith('VUL-')) {
+      $('loginMsg').textContent = 'Nog geen Google Client ID ingevuld in config.js.';
+      $('loginBtn').disabled = true;
+      return;
+    }
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CFG.googleClientId,
+      scope: SCOPE,
+      callback: (resp) => {
+        if (resp.error) { $('loginMsg').textContent = 'Inloggen mislukt: ' + resp.error; return; }
+        token = resp.access_token;
+        tokenExp = Date.now() + (resp.expires_in || 3600) * 1000 - 60000;
+        try { localStorage.setItem('pd_seen', '1'); } catch (e) {}
+        $('login').classList.add('hidden');
+        $('app').classList.remove('hidden');
+        $('logout').classList.remove('hidden');
+        load();
+        clearInterval(timer);
+        timer = setInterval(() => { if (!document.hidden) load(); }, (CFG.refreshSeconds || 60) * 1000);
+      }
+    });
+    let seen = false; try { seen = !!localStorage.getItem('pd_seen'); } catch (e) {}
+    if (seen) $('loginBtn').textContent = 'Doorgaan met Google';
+  }
+  $('loginBtn').addEventListener('click', () => tokenClient && tokenClient.requestAccessToken({prompt: ''}));
+  $('logout').addEventListener('click', () => {
+    if (token && window.google) google.accounts.oauth2.revoke(token, () => {});
+    token = null; clearInterval(timer);
+    try { localStorage.removeItem('pd_seen'); } catch (e) {}
+    location.reload();
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && token) load(); });
+
+  function needLogin(msg) {
+    token = null; clearInterval(timer);
+    $('app').classList.add('hidden'); $('logout').classList.add('hidden');
+    $('login').classList.remove('hidden');
+    $('loginBtn').textContent = 'Opnieuw inloggen';
+    $('loginMsg').textContent = msg || '';
+  }
+
+  async function drive(url) {
+    const r = await fetch(url, {headers: {Authorization: 'Bearer ' + token}});
+    if (r.status === 401) { needLogin('Je sessie is verlopen.'); throw new Error('401'); }
+    return r;
+  }
+
+  async function findFile() {
+    const q = encodeURIComponent(`name = 'dashboard.json' and '${CFG.folderId}' in parents and trashed = false`);
+    const r = await drive(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,modifiedTime)&orderBy=modifiedTime desc`);
+    const j = await r.json();
+    return j.files && j.files[0] ? j.files[0].id : null;
+  }
+
+  async function load() {
+    if (!token) return;
+    if (Date.now() > tokenExp) { needLogin('Je sessie is verlopen (na een uur). Klik om verder te gaan.'); return; }
+    try {
+      let r = await drive(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+      if (r.status === 404 && CFG.folderId) {
+        const id = await findFile();
+        if (id) { fileId = id; r = await drive(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`); }
+      }
+      if (r.status === 403) throw new Error('Geen toegang tot dashboard.json. Ben je met het juiste Google-account ingelogd?');
+      if (!r.ok) throw new Error('Google Drive gaf fout ' + r.status);
+      lastData = await r.json();
+      render(lastData);
+    } catch (e) {
+      if (e.message === '401') return;
+      showAlert('Laden mislukt: ' + e.message + (lastData ? ' Je ziet de vorige stand.' : ''), true);
+    }
+  }
+
+  function showAlert(msg, err) {
+    const a = $('alert');
+    a.textContent = msg || '';
+    a.classList.toggle('hidden', !msg);
+    a.classList.toggle('err', !!err);
+  }
+
+  // ---------- tekenen ----------
+  function render(d) {
+    $('updated').textContent = 'Mac mini bijgewerkt: ' + when(d.generated_at) + ' ';
+    const ageMin = (Date.now() - new Date(d.generated_at).getTime()) / 60000;
+    const limit = 3 * (d.interval_minutes || 5);
+    showAlert(ageMin > limit
+      ? `Let op: de Mac mini heeft al ${ageMin < 120 ? Math.round(ageMin) + ' minuten' : Math.round(ageMin / 60) + ' uur'} niets nieuws gestuurd. Staat hij aan en draait de geplande taak? De cijfers kunnen verouderd zijn.`
+      : '');
+
+    const accounts = d.accounts || [];
+    const strava = d.strava || {};
+    const acts = strava.status === 'ok' ? (strava.activities || []) : [];
+    const wk = weekStats(acts);
+
+    // samenvatting
+    const ok = accounts.filter((a) => a.status === 'ok');
+    const lede = $('lede'); lede.replaceChildren();
+    const parts = [];
+    if (ok.length) { const dp = ok.reduce((s, a) => s + (a.day_pl || 0), 0); parts.push(['Vandaag ', tone(el('b', null, money(dp, ok[0].currency, true)), dp), ' op je forex-accounts']); }
+    if (d.telenet && d.telenet.status === 'ok') parts.push(['Telenet-opslag ', el('b', null, pct(d.telenet.used_pct)), ' vol']);
+    if (strava.status === 'ok') parts.push([el('b', null, num(wk.runKm, 1)), ' km gelopen deze week']);
+    parts.forEach((p, i) => { if (i) lede.append(i === parts.length - 1 ? ' en ' : ', '); lede.append(...p); });
+    if (parts.length) lede.append('.');
+
+    renderAccounts(accounts);
+    renderPositions(accounts);
+    renderTrades(accounts);
+    renderTelenet(d.telenet || {});
+    renderStrava(strava, acts, wk);
+  }
+
+  function renderAccounts(accounts) {
+    const box = $('accounts'); box.replaceChildren();
+    if (!accounts.length) { box.append(el('div', 'empty', 'Nog geen accounts in dashboard.json.')); return; }
+    accounts.forEach((a) => {
+      const card = el('div', 'card');
+      const top = el('div', 'card-top');
+      top.append(el('span', 'name', a.name), el('span', 'small muted', a.login ? '#' + a.login : ''));
+      card.append(top);
+      box.append(card);
+      if (a.status !== 'ok') { card.append(el('div', 'big muted', '—'), el('div', 'empty', a.message || 'Geen gegevens')); return; }
+      card.append(el('div', 'small muted', 'Equity'), el('div', 'big', money(a.equity, a.currency)));
+      const dl = el('dl', 'kv');
+      const row = (label, txt, t) => { const dd = el('dd', null, txt); if (t != null) tone(dd, t); dl.append(el('dt', null, label), dd); };
+      row('Vandaag', money(a.day_pl, a.currency, true), a.day_pl);
+      row('Open P/L', money(a.open_pl, a.currency, true), a.open_pl);
+      row('Balans', money(a.balance, a.currency));
+      if (a.total_pl != null && a.start_balance) row('Sinds start (' + money(a.start_balance, a.currency) + ')', pct(a.total_pl / a.start_balance * 100, true), a.total_pl);
+      row('Open posities', String(a.open_positions ?? 0));
+      card.append(dl);
+
+      const rule = (label, used, lim, warnAt) => {
+        const r = el('div', 'rule');
+        const share = lim > 0 ? Math.max(0, Math.min(1, used / lim)) : 0;
+        r.append(el('div', null, `${label}: ${money(used, a.currency)} van ${money(lim, a.currency)}`));
+        const bar = el('div', 'bar'), fill = el('span');
+        fill.style.width = share * 100 + '%';
+        if (share >= warnAt) fill.style.background = 'var(--bad)';
+        bar.append(fill); r.append(bar); card.append(r);
+      };
+      const sb = a.start_balance;
+      if (sb && a.max_daily_loss_pct) rule('Dagverlies-limiet gebruikt', Math.max(0, -(a.day_pl || 0)), sb * a.max_daily_loss_pct / 100, 0.7);
+      if (sb && a.max_drawdown_pct) rule('Max drawdown gebruikt', Math.max(0, sb - a.equity), sb * a.max_drawdown_pct / 100, 0.7);
+      if (sb && a.profit_target_pct) rule('Winstdoel', Math.max(0, a.equity - sb), sb * a.profit_target_pct / 100, 2);
+
+      const pts = (a.curve || []).filter((c) => c.balance != null).map((c) => ({t: new Date(c.t), v: c.balance}));
+      if (pts.length > 1 && window.d3) {
+        const sp = el('div', 'spark'); card.append(sp);
+        const w = sp.clientWidth || 240, h = 56;
+        const x = d3.scaleLinear().domain([0, pts.length - 1]).range([2, w - 2]);
+        const y = d3.scaleLinear().domain(d3.extent(pts, (p) => p.v)).nice().range([h - 4, 4]);
+        const svg = d3.select(sp).append('svg').attr('width', '100%').attr('height', h).attr('viewBox', `0 0 ${w} ${h}`)
+          .attr('role', 'img').attr('aria-label', `Balansverloop ${a.name}`);
+        svg.append('path').datum(pts).attr('fill', 'none').attr('stroke', 'var(--accent)').attr('stroke-width', 1.6)
+          .attr('d', d3.line().x((p, i) => x(i)).y((p) => y(p.v)));
+        const dot = svg.append('circle').attr('r', 3).attr('fill', 'var(--accent)').style('display', 'none');
+        const tt = tip(sp);
+        svg.on('pointermove', (ev) => {
+          const i = Math.max(0, Math.min(pts.length - 1, Math.round(x.invert(d3.pointer(ev)[0]))));
+          dot.style('display', null).attr('cx', x(i)).attr('cy', y(pts[i].v));
+          tt.show([money(pts[i].v, a.currency), when(pts[i].t)], x(i), y(pts[i].v));
+        }).on('pointerleave', () => { dot.style('display', 'none'); tt.hide(); });
+      }
+    });
+  }
+
+  function fillTable(tb, rows, emptyMsg, cols) {
+    tb.replaceChildren();
+    if (!rows.length) { const tr = el('tr'), td = el('td', 'empty', emptyMsg); td.colSpan = cols; tr.append(td); tb.append(tr); return; }
+    rows.forEach((cells) => {
+      const tr = el('tr');
+      cells.forEach(([txt, cls, t]) => { const td = el('td', cls, txt); if (t != null) tone(td, t); tr.append(td); });
+      tb.append(tr);
+    });
+  }
+
+  function renderPositions(accounts) {
+    const rows = accounts.flatMap((a) => (a.positions || []).map((p) => [[a.name], [p.symbol], [p.side], [num(p.volume, 2), 'num'], [String(p.open_price), 'num'], [money(p.profit, a.currency, true), 'num', p.profit]]));
+    fillTable($('positions'), rows, 'Geen open posities.', 6);
+  }
+
+  function renderTrades(accounts) {
+    const all = accounts.flatMap((a) => (a.trades || []).map((t) => ({...t, account: a.name, currency: a.currency})))
+      .sort((x, y) => (x.closed_at < y.closed_at ? 1 : -1)).slice(0, 12);
+    fillTable($('trades'), all.map((t) => [[when(t.closed_at)], [t.account], [t.symbol], [t.side], [num(t.volume, 2), 'num'], [money(t.profit, t.currency, true), 'num', t.profit]]), 'Nog geen gesloten trades.', 6);
+  }
+
+  function renderTelenet(t) {
+    const c = $('telenet'); c.replaceChildren();
+    const top = el('div', 'card-top');
+    top.append(el('span', 'name', 'Opnameruimte'), el('span', 'small muted', t.measured_at ? 'gemeten ' + when(t.measured_at) : ''));
+    c.append(top);
+    if (t.status !== 'ok') { c.append(el('div', 'empty', t.message || 'Nog geen meting.')); return; }
+    c.append(el('div', 'big', pct(t.used_pct) + ' vol'));
+    const bar = el('div', 'bar'), fill = el('span');
+    fill.style.width = Math.min(100, t.used_pct) + '%';
+    if (t.used_pct >= 90) fill.style.background = 'var(--bad)';
+    bar.append(fill); c.append(bar);
+    const dl = el('dl', 'kv');
+    [['Gebruikt', num(t.used_hours, 1) + ' uur'], ['Vrij', num(t.free_hours, 1) + ' uur'], ['Totaal', num(t.total_hours) + ' uur']]
+      .forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, v)));
+    c.append(dl);
+  }
+
+  // ---------- Strava ----------
+  const isRun = (a) => /Run/.test(a.sport || '');
+  const mondayOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+  const key = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+
+  function weekStats(acts) {
+    const mon = mondayOf(new Date());
+    const week = acts.filter((a) => new Date(a.start_local) >= mon);
+    const runs = week.filter(isRun);
+    // weekreeks: opeenvolgende weken met minstens 1 activiteit
+    const weeks = new Set(acts.map((a) => key(mondayOf(new Date(a.start_local)))));
+    let streak = 0, cur = new Date(mon);
+    if (!weeks.has(key(cur))) cur.setDate(cur.getDate() - 7);
+    while (weeks.has(key(cur))) { streak++; cur.setDate(cur.getDate() - 7); }
+    return {runKm: runs.reduce((s, a) => s + (a.distance_km || 0), 0), runs: runs.length, activities: week.length, streak};
+  }
+
+  function renderStrava(strava, acts, wk) {
+    const c = $('week'); c.replaceChildren();
+    c.append(el('div', 'small muted', 'Deze week gelopen'));
+    if (strava.status !== 'ok') {
+      c.append(el('div', 'big muted', '—'), el('div', 'empty', strava.message || 'Strava nog niet gekoppeld op de Mac mini.'));
+    } else {
+      c.append(el('div', 'big', num(wk.runKm, 1) + ' km'));
+      const dl = el('dl', 'kv');
+      [['Looptrainingen', String(wk.runs)], ['Activiteiten (alle sporten)', String(wk.activities)], ['Weekreeks', wk.streak + (wk.streak === 1 ? ' week' : ' weken') + ' op rij']]
+        .forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, v)));
+      c.append(dl);
+    }
+    renderWeeks(acts, strava.status === 'ok');
+    fillTable($('acts'), acts.slice(0, 6).map((a) => [[day(a.start_local)], [a.name], [a.sport], [num(a.distance_km, 2), 'num'], [String(a.moving_min), 'num'], [a.pace || '—']]),
+      strava.status === 'ok' ? 'Geen activiteiten.' : '—', 6);
+  }
+
+  function renderWeeks(acts, ok) {
+    const box = $('weeks'); box.replaceChildren();
+    if (!ok || !window.d3) { box.append(el('div', 'empty', '—')); return; }
+    const mon = mondayOf(new Date());
+    const data = [];
+    for (let w = 7; w >= 0; w--) {
+      const s = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() - 7 * w);
+      const e = new Date(s.getFullYear(), s.getMonth(), s.getDate() + 7);
+      const km = acts.filter((a) => isRun(a) && new Date(a.start_local) >= s && new Date(a.start_local) < e).reduce((t, a) => t + (a.distance_km || 0), 0);
+      data.push({k: key(s), date: s, km: Math.round(km * 10) / 10});
+    }
+    const w = box.clientWidth || 300, h = 170, m = {t: 18, r: 4, b: 22, l: 4};
+    const x = d3.scaleBand().domain(data.map((d) => d.k)).range([m.l, w - m.r]).padding(0.25);
+    const y = d3.scaleLinear().domain([0, Math.max(5, d3.max(data, (d) => d.km))]).nice().range([h - m.b, m.t]);
+    const lab = (d) => d.date.toLocaleDateString('nl-BE', {day: 'numeric', month: 'short'});
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('height', h).attr('viewBox', `0 0 ${w} ${h}`)
+      .attr('role', 'img').attr('aria-label', 'Gelopen km per week: ' + data.map((d) => lab(d) + ' ' + num(d.km, 1) + ' km').join(', '));
+    svg.append('line').attr('x1', m.l).attr('x2', w - m.r).attr('y1', y(0)).attr('y2', y(0)).attr('stroke', 'var(--line)');
+    const tt = tip(box);
+    svg.selectAll('rect').data(data).join('rect')
+      .attr('x', (d) => x(d.k)).attr('width', x.bandwidth()).attr('y', (d) => y(d.km)).attr('height', (d) => Math.max(0, y(0) - y(d.km))).attr('rx', 3)
+      .attr('fill', (d, i) => i === data.length - 1 ? 'var(--accent)' : 'var(--bar-muted)')
+      .on('pointerenter pointermove', (ev, d) => tt.show(['Week van ' + lab(d), num(d.km, 1) + ' km gelopen'], x(d.k) + x.bandwidth() / 2, y(d.km)))
+      .on('pointerleave', () => tt.hide());
+    svg.selectAll('text.v').data(data).join('text').attr('class', 'v').attr('text-anchor', 'middle')
+      .attr('x', (d) => x(d.k) + x.bandwidth() / 2).attr('y', (d) => y(d.km) - 4).text((d) => d.km > 0 ? num(d.km, 1) : '');
+    const every = x.bandwidth() < 34 ? 2 : 1;
+    svg.selectAll('text.l').data(data.filter((d, i) => (data.length - 1 - i) % every === 0)).join('text').attr('class', 'l')
+      .attr('text-anchor', 'middle').attr('x', (d) => x(d.k) + x.bandwidth() / 2).attr('y', h - 6).text(lab);
+  }
+
+  let rt;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => lastData && render(lastData), 200); });
+  initGoogle();
+})();
+</script>
+</body>
+</html>

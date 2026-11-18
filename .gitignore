@@ -1,0 +1,5 @@
+collector/config.json
+collector/dashboard.json
+collector/*.log
+collector/.telenet_cache.json
+__pycache__/
