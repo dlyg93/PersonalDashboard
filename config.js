@@ -2,7 +2,7 @@
 // een Google Client ID is openbaar, en het bestand in je Drive kan enkel jij openen.
 window.DASHBOARD_CONFIG = {
   // Uit Google Cloud Console > APIs & Services > Credentials (type: Web application)
-  googleClientId: "VUL-HIER-JE-CLIENT-ID-IN.apps.googleusercontent.com",
+  googleClientId: "576486249030-vcclq7skbb3uj0m6tn76dlfjfl25vgim.apps.googleusercontent.com",
 
   // dashboard.json in G:\Mijn Drive\Claude_Personal_Dashboard
   fileId: "1XHdTW74BN2ZbhLnz5k64vLszz_cCF8wt",
