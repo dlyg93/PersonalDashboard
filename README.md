@@ -40,7 +40,30 @@ in testmodus: klik op **Doorgaan**.
    en klik in de browser op **Toestaan**.
 3. De sleutels komen in `%USERPROFILE%\.personal-dashboard\strava.json`, dus **niet** in Drive of GitHub.
 
-## 3. De collector op de Mac mini
+## 3. Whoop koppelen (eenmalig, ~5 min)
+
+1. Ga naar developer.whoop.com, log in en maak een app aan.
+2. Redirect URL: `http://localhost:8766/callback`
+3. Scopes: `offline`, `read:recovery`, `read:cycles`, `read:sleep`, `read:workout`, `read:profile`, `read:body_measurement`.
+4. Dubbelklik op de Mac mini op `whoop_koppelen.bat`, plak client ID en secret en log in bij Whoop.
+
+De sleutels komen alleen in `%USERPROFILE%\.personal-dashboard\whoop.json`, nooit in Drive of GitHub.
+
+## 4. Dagelijks Telegram-bericht (eenmalig, ~3 min)
+
+1. Dubbelklik op `telegram_koppelen.bat`.
+2. Geef het bot-token (van @BotFather) en je chat-ID, en het uur van het bericht (standaard 07:30).
+3. Je krijgt meteen een testbericht. Daarna stuurt de collector elke ochtend één bericht.
+
+Voorbeeld bekijken zonder te versturen: `python collector.py --telegram-test`.
+
+## 5. Marathonplan
+
+`marathon_plan.json` in de dashboardmap is een eerste versie (22 weken, start ma 23 nov 2026, Kortrijk zo 25 apr 2027).
+Je mag het bestand aanpassen; de collector toetst elke Strava-loop aan de sessie van die week.
+Opnieuw genereren: `python maak_marathonplan.py marathon_plan.json --overschrijf`.
+
+## 6. De collector op de Mac mini
 
 Zie de map `collector/`. Kort: `installeer.bat` → paden van je MT5-terminals invullen in
 `config.json` → `installeer.bat` opnieuw. Daarna draait het elke 5 minuten via Taakplanner.

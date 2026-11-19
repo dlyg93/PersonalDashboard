@@ -34,5 +34,10 @@
     "enabled": true,
     "every_minutes": 15,
     "activities": 100
-  }
+  },
+  "whoop": {
+    "enabled": true,
+    "every_minutes": 30
+  },
+  "marathon_plan": "marathon_plan.json"
 }
