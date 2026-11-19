@@ -16,12 +16,12 @@
   :root {
     --bg: #0f1115; --panel: #171a21; --panel2: #1d212b; --line: #262b36; --fg: #e8eaf0; --muted: #8b93a7;
     --accent: #3b82f6; --good: #22c55e; --bad: #ef4444; --warn: #f59e0b; --bar-bg: #232835; --bar-muted: #3a4152;
-    --c-forex: #eab308; --c-telenet: #a78bfa; --c-sport: #fb6a2c;
+    --c-forex: #eab308; --c-telenet: #a78bfa; --c-sport: #fb6a2c; --c-health: #ec4899;
     --radius: 12px;
   }
   @media (prefers-color-scheme: light) {
     :root { --bg: #f5f6f8; --panel: #ffffff; --panel2: #f3f4f7; --line: #e3e6ec; --fg: #161a22; --muted: #667085; --bar-bg: #eceef2; --bar-muted: #c9ced8;
-      --c-forex: #ca8a04; --c-telenet: #7c3aed; --c-sport: #ea580c; }
+      --c-forex: #ca8a04; --c-telenet: #7c3aed; --c-sport: #ea580c; --c-health: #db2777; }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -68,7 +68,7 @@
   .num { text-align: right; }
   .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
   .tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.25); border-radius: 8px; padding: 4px 8px; font-size: 12px; white-space: nowrap; z-index: 5; display: none; }
-  .tip b { display: block; }
+  .tip b, .tip span { display: block; }
   svg text { fill: var(--muted); font-size: 11px; }
   #login { text-align: center; padding: 70px 16px; }
   #login p { color: var(--muted); max-width: 420px; margin: 12px auto 22px; }
@@ -126,6 +126,15 @@
   @media (prefers-reduced-motion: no-preference) { .spin { animation: sp 1s linear infinite; } @keyframes sp { to { transform: rotate(360deg); } } }
   .hist { list-style: none; padding-left: 0 !important; }
   .hist li { margin: 4px 0; }
+  /* marathon & gezondheid */
+  .sess { display: grid; grid-template-columns: 70px 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .sess .d { color: var(--muted); font-size: 13px; }
+  .sess .st { font-size: 13px; white-space: nowrap; }
+  .sess.today { background: var(--panel2); border-radius: 8px; padding-left: 6px; padding-right: 6px; }
+  .ins { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+  .ins li { margin: 4px 0; }
+  .ring-big { font-size: 40px; font-weight: 700; line-height: 1; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #fff; }
 </style>
 <script src="config.js"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
@@ -154,6 +163,7 @@
       <a href="#forex" data-v="forex" data-icon="forex">Forex</a>
       <a href="#telenet" data-v="telenet" data-icon="tv">Telenet TV</a>
       <a href="#sport" data-v="sport" data-icon="run">Sport</a>
+      <a href="#gezondheid" data-v="gezondheid" data-icon="heart">Gezondheid</a>
     </nav>
     <p class="lede" id="lede"></p>
     <div id="alert" class="alert hidden" role="status"></div>
@@ -216,6 +226,18 @@
 
     <!-- SPORT -->
     <section data-view="sport" class="hidden">
+      <h2>Marathon Kortrijk</h2>
+      <p class="sub" id="mSub"></p>
+      <div class="grid">
+        <div class="card" id="mToday"></div>
+        <div class="card" id="mWeek"></div>
+        <div class="card" id="mIns"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="name">Kilometers per week: gepland en gelopen</div>
+        <div class="small muted">Omlijnd = gepland, gevuld = gelopen. Het streepje is deze week.</div>
+        <div class="chart" id="mChart"></div>
+      </div>
       <h2>Sport</h2>
       <div class="grid">
         <div class="card" id="week"></div>
@@ -231,6 +253,21 @@
           <thead><tr><th>Datum</th><th>Activiteit</th><th>Sport</th><th class="num">Km</th><th class="num">Minuten</th><th>Tempo</th></tr></thead>
           <tbody id="acts"></tbody>
         </table></div>
+      </div>
+    </section>
+    <!-- GEZONDHEID -->
+    <section data-view="gezondheid" class="hidden">
+      <h2>Gezondheid</h2>
+      <p class="sub" id="hSub">Uit Whoop, via de Mac mini.</p>
+      <div class="grid">
+        <div class="card" id="hRec"></div>
+        <div class="card" id="hSleep"></div>
+        <div class="card" id="hWeight"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="name">Herstel en HRV, laatste 3 weken</div>
+        <div class="small muted">Balken = herstel (groen 67%+, geel 34-66%, rood onder 34%), lijn = HRV</div>
+        <div class="chart" id="hChart"></div>
       </div>
     </section>
   </main>
@@ -282,7 +319,12 @@
     film: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4M3 16h4M17 8h4M17 16h4"/>',
     run: '<circle cx="15" cy="4" r="2"/><path d="M5 20l4-5 3 2 2-5M10 8l4-1 3 4 3 1M9 11l-2 3-3 0M14 7l-2 5"/>',
     flame: '<path d="M12 22a7 7 0 007-7c0-4-3-6-4-9-1 2-2 3-3 3 0-3-1-5-3-7 0 4-4 7-4 13a7 7 0 007 7z"/>',
-    cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'
+    cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"/><path d="M3 12h4l2-3 3 6 2-3h7"/>',
+    moon: '<path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/>',
+    scale: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 9a4 4 0 018 0M12 9l1.5-2"/>',
+    flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+    check: '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>'
   };
   const iconSvg = (k, size = 16) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>`;
   document.querySelectorAll('nav.tabs a[data-icon]').forEach((a) => a.insertAdjacentHTML('afterbegin', iconSvg(a.dataset.icon)));
@@ -406,7 +448,7 @@
 
   // ---------- weergaven ----------
   function setView(v) {
-    view = ['brein', 'forex', 'telenet', 'sport'].includes(v) ? v : 'brein';
+    view = ['brein', 'forex', 'telenet', 'sport', 'gezondheid'].includes(v) ? v : 'brein';
     document.querySelectorAll('[data-view]').forEach((s) => s.classList.toggle('hidden', s.dataset.view !== view));
     document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('on', a.dataset.v === view));
     $('lede').classList.toggle('hidden', view !== 'brein');
@@ -478,15 +520,16 @@
     parts.forEach((p, i) => { if (i) lede.append(i === parts.length - 1 ? ' en ' : ', '); lede.append(...p); });
     if (parts.length) lede.append('.');
 
-    if (view === 'brein') renderBrain(accounts, t, lib, strava, acts, wk);
+    if (view === 'brein') renderBrain(accounts, t, lib, strava, acts, wk, d.marathon || {}, d.whoop || {});
     else if (window.__brainAnim) { cancelAnimationFrame(window.__brainAnim); window.__brainAnim = null; }
     if (view === 'forex') { renderAccounts(accounts); renderPositions(accounts); renderTrades(accounts); }
     if (view === 'telenet') renderTelenetView(t, lib, d.actions || []);
-    if (view === 'sport') renderStrava(strava, acts, wk);
+    if (view === 'sport') { renderMarathon(d.marathon || {}); renderStrava(strava, acts, wk); }
+    if (view === 'gezondheid') renderHealth(d.whoop || {});
   }
 
   // ---------- BREIN ----------
-  function renderBrain(accounts, t, lib, strava, acts, wk) {
+  function renderBrain(accounts, t, lib, strava, acts, wk, mar, wh) {
     const box = $('brain'); box.replaceChildren();
     const W = box.clientWidth || 360, narrow = W < 560;
 
@@ -525,18 +568,35 @@
           {icon: 'film', label: 'Bibliotheek', value: (t.library || []).length + ' titels', st: 'none', go: 'telenet', f: 'alles',
             tip: ['Bibliotheek', (t.library || []).length + ' titels']}
         ] : []},
-      {key: 'sport', icon: 'run', label: 'Sport', color: 'var(--c-sport)', angle: 150,
-        value: strava.status === 'ok' ? num(wk.runKm, 1) + ' km' : '—',
-        st: strava.status !== 'ok' ? 'none' : (wk.activities ? 'ok' : 'warn'),
-        tip: ['Sport (Strava)', strava.status === 'ok' ? `${num(wk.runKm, 1)} km gelopen deze week` : (strava.message || 'geen data')],
-        kids: strava.status === 'ok' ? [
-          {icon: 'cal', label: 'Deze week', value: wk.activities + ' activiteit' + (wk.activities === 1 ? '' : 'en'), st: wk.activities ? 'ok' : 'warn', go: 'sport',
-            tip: ['Deze week', `${wk.runs} looptraining(en), ${num(wk.runKm, 1)} km`]},
-          {icon: 'flame', label: 'Reeks', value: wk.streak + (wk.streak === 1 ? ' week' : ' weken'), st: wk.streak ? 'ok' : 'warn', go: 'sport',
-            tip: ['Weekreeks', wk.streak + ' week/weken op rij actief']},
-          acts[0] ? {icon: 'run', label: 'Laatste', value: day(acts[0].start_local), st: 'none', go: 'sport',
-            tip: [acts[0].name, `${num(acts[0].distance_km, 1)} km · ${acts[0].moving_min} min`]} : null
-        ].filter(Boolean) : []}
+      {key: 'sport', icon: 'run', label: 'Sport', color: 'var(--c-sport)',
+        value: mar.status === 'ok' ? `nog ${mar.days_left} d` : (strava.status === 'ok' ? num(wk.runKm, 1) + ' km' : '—'),
+        st: (() => { const td = mar.today || {}; if (mar.status !== 'ok') return strava.status === 'ok' ? 'ok' : 'none';
+          return td.status === 'done' ? 'ok' : td.status === 'todo' ? 'warn' : 'ok'; })(),
+        tip: ['Sport & marathon', mar.status === 'ok' ? `Nog ${mar.days_left} dagen tot Kortrijk` : `${num(wk.runKm, 1)} km gelopen deze week`],
+        kids: [
+          mar.status === 'ok' ? {icon: (mar.today || {}).status === 'done' ? 'check' : 'run', label: 'Vandaag',
+            value: (mar.today || {}).type === 'rust' ? 'rustdag' : `${(mar.today || {}).km} km ${((mar.today || {}).status === 'done') ? '✓' : ''}`,
+            st: (mar.today || {}).status === 'done' ? 'ok' : (mar.today || {}).status === 'todo' ? 'warn' : 'none', go: 'sport',
+            tip: [(mar.today || {}).label || 'Vandaag', (mar.today || {}).notes || '', (mar.today || {}).advice || '']} : null,
+          mar.status === 'ok' && mar.week_no ? {icon: 'cal', label: 'Week ' + mar.week_no, value: (() => { const w = (mar.weeks || [])[mar.week_no - 1]; return w ? `${w.done}/${w.count} · ${num(w.actual_km, 0)}/${num(w.planned_km, 0)} km` : ''; })(),
+            st: 'none', go: 'sport', tip: ['Deze week', ...(mar.insights || []).slice(0, 1)]}
+            : (strava.status === 'ok' ? {icon: 'cal', label: 'Deze week', value: wk.activities + ' activiteit' + (wk.activities === 1 ? '' : 'en'), st: wk.activities ? 'ok' : 'warn', go: 'sport',
+              tip: ['Deze week', `${wk.runs} looptraining(en), ${num(wk.runKm, 1)} km`]} : null),
+          mar.status === 'ok' ? {icon: 'flag', label: 'Kortrijk', value: mar.days_left + ' dagen', st: 'none', go: 'sport', tip: [mar.race.name, mar.race.date, 'Doel: ' + mar.race.goal]}
+            : (strava.status === 'ok' ? {icon: 'flame', label: 'Reeks', value: wk.streak + (wk.streak === 1 ? ' week' : ' weken'), st: wk.streak ? 'ok' : 'warn', go: 'sport', tip: ['Weekreeks', wk.streak + ' week/weken op rij actief']} : null)
+        ].filter(Boolean)},
+      {key: 'gezondheid', icon: 'heart', label: 'Gezondheid', color: 'var(--c-health)',
+        value: wh.status === 'ok' && (wh.today || {}).recovery != null ? `herstel ${num(wh.today.recovery)}%` : '—',
+        st: wh.status !== 'ok' || (wh.today || {}).recovery == null ? 'none' : (wh.today.recovery >= 67 ? 'ok' : wh.today.recovery >= 34 ? 'warn' : 'bad'),
+        tip: ['Gezondheid (Whoop)', wh.status === 'ok' ? `HRV ${num((wh.today || {}).hrv)} ms · rustpols ${num((wh.today || {}).rhr)}` : (wh.message || 'nog niet gekoppeld')],
+        kids: wh.status === 'ok' ? [
+          {icon: 'heart', label: 'HRV', value: num((wh.today || {}).hrv) + ' ms', st: 'none', go: 'gezondheid', tip: ['HRV', 'rustpols ' + num((wh.today || {}).rhr)]},
+          {icon: 'moon', label: 'Slaap', value: (wh.today || {}).sleep_h ? `${Math.floor(wh.today.sleep_h)}u${String(Math.round((wh.today.sleep_h % 1) * 60)).padStart(2, '0')}` : '—',
+            st: (wh.today || {}).sleep_perf == null ? 'none' : wh.today.sleep_perf >= 85 ? 'ok' : wh.today.sleep_perf >= 70 ? 'warn' : 'bad', go: 'gezondheid',
+            tip: ['Slaap', `${num((wh.today || {}).sleep_perf)}% van wat je nodig had`]},
+          {icon: 'scale', label: 'Gewicht', value: (wh.weight || {}).kg ? num(wh.weight.kg, 1) + ' kg' : '—', st: 'none', go: 'gezondheid',
+            tip: ['Gewicht', 'doel 95 kg']}
+        ] : []}
     ];
 
     // ---- opbouw: knopen en verbindingen; posities worden per beeldje berekend ----
@@ -561,7 +621,7 @@
     });
 
     // posities op tijdstip s (seconden)
-    const R = 175, R2 = 125, spread = 50, SPEED = 360 / 160;   // één rondje per 160 s
+    const R = 185, R2 = 120, spread = 44, SPEED = 360 / 160;   // één rondje per 160 s
     const rowH = 150, X0 = 46, KX = [140, 225, 310];
     const rad = (d) => d * Math.PI / 180;
     function place(s) {
@@ -576,7 +636,7 @@
         }
         const rot = reduce ? 0 : s * SPEED;
         if (d.kind === 'c') { d.x = 0; d.y = reduce ? 0 : Math.sin(s * 0.8) * 2; return; }
-        const ta = [-90, 30, 150][d.ti] + rot;
+        const ta = -90 + d.ti * 360 / topics.length + rot;
         const breathe = reduce ? 0 : Math.sin(s * 0.6 + d.ti) * 6;
         if (d.kind === 't') { d.x = (R + breathe) * Math.cos(rad(ta)); d.y = (R + breathe) * Math.sin(rad(ta)); return; }
         const p = d.parent;
@@ -588,7 +648,7 @@
 
     // vast kader, groot genoeg voor een volledige omwenteling
     let vx, vy, vw, vh;
-    if (narrow) { vx = -24; vy = -50; vw = 400; vh = 120 + 2 * rowH + 135; }
+    if (narrow) { vx = -24; vy = -50; vw = 400; vh = 120 + (topics.length - 1) * rowH + 135; }
     else { const E = R + 8 + R2 + 24 + 50; vx = -E; vy = -E + 10; vw = 2 * E; vh = 2 * E - 10; }
     const svg = d3.select(box).append('svg').attr('viewBox', `${vx} ${vy} ${vw} ${vh}`)
       .style('max-height', narrow ? 'none' : '640px')
@@ -944,6 +1004,160 @@
     if (!pending) return;
     const done = (d.actions || []).find((a) => a.id === pending.id);
     if (done) { lastResult = done; pending = null; save(); schedule(); }
+  }
+
+  // ---------- MARATHON ----------
+  const ST = {done: ['✓ gehaald', 'good'], partial: ['◐ deels', 'warn'], short: ['◔ te kort', 'warn'], missed: ['✗ gemist', 'bad'],
+    open: ['• nog te doen', 'warn'], planned: ['gepland', 'muted'], info: ['', 'muted'], todo: ['nog te doen', 'warn'], rest: ['', 'muted']};
+  const TYPE = {rustig: 'Rustig', lang: 'Lange duurloop', tempo: 'Tempo', interval: 'Interval', mt: 'Marathontempo', test: 'Test', race: 'Marathon'};
+  function renderMarathon(m) {
+    const ids = ['mToday', 'mWeek', 'mIns'];
+    if (m.status !== 'ok') {
+      ids.forEach((i) => $(i).replaceChildren());
+      $('mToday').append(el('div', 'empty', m.message || 'Nog geen marathonplan. Zet marathon_plan.json in de map op de Mac mini.'));
+      $('mSub').textContent = ''; $('mChart').replaceChildren(); return;
+    }
+    $('mSub').textContent = `${m.race.name} · ${date(m.race.date)} · doel ${m.race.goal} (${m.race.goal_pace})` + (m.plan_status === 'draft' ? ' · plan: eerste versie' : '');
+    // vandaag
+    const td = m.today || {}, c = $('mToday'); c.replaceChildren();
+    c.append(el('div', 'small muted', 'Vandaag'));
+    c.append(el('div', 'big', td.type === 'rust' ? td.label : `${td.label} ${num(td.km, td.km % 1 ? 1 : 0)} km`));
+    if (td.pace) c.append(el('div', 'small', 'Tempo: ' + td.pace));
+    if (td.notes) c.append(el('div', 'small muted', td.notes));
+    const [txt, cls] = ST[td.status] || ['', 'muted'];
+    if (txt) { const p = el('div', cls, txt + (td.run ? ` — ${num(td.run.km, 1)} km aan ${td.run.pace || '?'}` : '')); p.style.marginTop = '8px'; p.style.fontWeight = '600'; c.append(p); }
+    if (td.advice) { const a = el('div', 'alert'); a.textContent = '💡 ' + td.advice; c.append(a); }
+    // week
+    const wc = $('mWeek'); wc.replaceChildren();
+    const w = m.week_no ? m.weeks[m.week_no - 1] : m.weeks[0];
+    wc.append(el('div', 'card-top'));
+    wc.firstChild.append(el('span', 'name', m.week_no ? `Week ${w.week} · ${w.phase}` : 'Week 1 (start ' + date(w.start) + ')'),
+      el('span', 'small muted', `${num(w.actual_km, 1)} / ${num(w.planned_km, 0)} km`));
+    if (w.focus) wc.append(el('div', 'small muted', w.focus));
+    const todayIso = key(new Date());
+    w.sessions.forEach((x) => {
+      const r = el('div', 'sess' + (x.date === todayIso ? ' today' : ''));
+      const dd = new Date(x.date + 'T12:00:00');
+      r.append(el('div', 'd', dd.toLocaleDateString('nl-BE', {weekday: 'short', day: 'numeric'})));
+      const mid = el('div');
+      mid.append(el('div', null, `${TYPE[x.type] || x.type}${x.km ? ' · ' + num(x.km, x.km % 1 ? 1 : 0) + ' km' : ''}`));
+      const sub = [x.notes, x.run ? `gelopen: ${num(x.run.km, 1)} km @ ${x.run.pace || '?'}` : null, x.note_pace].filter(Boolean).join(' · ');
+      if (sub) mid.append(el('div', 'small muted', sub));
+      const [t2, c2] = ST[x.status] || ['', 'muted'];
+      r.append(mid, el('div', 'st ' + c2, t2));
+      wc.append(r);
+    });
+    // inzichten
+    const ic = $('mIns'); ic.replaceChildren();
+    ic.append(el('div', 'name', 'Inzichten'));
+    const big = el('div', 'big', `${m.days_left} dagen`); ic.append(big, el('div', 'small muted', 'tot de start in Kortrijk'));
+    const ul = el('ul', 'ins'); (m.insights || []).forEach((i) => ul.append(el('li', null, i))); ic.append(ul);
+    // grafiek gepland vs gelopen
+    const box = $('mChart'); box.replaceChildren();
+    if (!window.d3) return;
+    const data = m.weeks.map((x) => ({...x, d: new Date(x.start + 'T12:00:00')}));
+    const W2 = box.clientWidth || 600, H = 190, mg = {t: 14, r: 18, b: 24, l: 28};
+    const x = d3.scaleBand().domain(data.map((d) => d.week)).range([mg.l, W2 - mg.r]).padding(0.2);
+    const y = d3.scaleLinear().domain([0, d3.max(data, (d) => Math.max(d.planned_km, d.actual_km)) || 10]).nice().range([H - mg.b, mg.t]);
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W2} ${H}`)
+      .attr('role', 'img').attr('aria-label', 'Kilometers per week, gepland en gelopen');
+    y.ticks(4).forEach((v) => { svg.append('line').attr('x1', mg.l).attr('x2', W2 - mg.r).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', 'var(--line)');
+      svg.append('text').attr('x', mg.l - 4).attr('y', y(v) + 3).attr('text-anchor', 'end').text(v); });
+    const phaseCol = {Basis: 'var(--good)', Sneller: 'var(--accent)', Marathon: 'var(--c-sport)', Afbouw: 'var(--c-telenet)', Race: 'var(--bad)'};
+    const tt = tip(box);
+    const g = svg.selectAll('g.w').data(data).join('g').attr('class', 'w');
+    g.append('rect').attr('x', (d) => x(d.week)).attr('width', x.bandwidth()).attr('y', (d) => y(d.planned_km)).attr('height', (d) => y(0) - y(d.planned_km))
+      .attr('fill', 'none').attr('stroke', (d) => phaseCol[d.phase] || 'var(--muted)').attr('stroke-width', 1.5).attr('rx', 2);
+    g.append('rect').attr('x', (d) => x(d.week) + 2).attr('width', Math.max(1, x.bandwidth() - 4)).attr('y', (d) => y(Math.min(d.actual_km, y.domain()[1])))
+      .attr('height', (d) => y(0) - y(Math.min(d.actual_km, y.domain()[1]))).attr('fill', (d) => phaseCol[d.phase] || 'var(--muted)').attr('rx', 2);
+    g.append('rect').attr('x', (d) => x(d.week)).attr('width', x.bandwidth()).attr('y', mg.t).attr('height', H - mg.b - mg.t).attr('fill', 'transparent')
+      .on('pointerenter pointermove', (ev, d) => tt.show([`Week ${d.week} · ${d.phase}`, `gepland ${num(d.planned_km, 0)} km`, `gelopen ${num(d.actual_km, 1)} km (${d.done}/${d.count})`], x(d.week) + x.bandwidth() / 2, y(d.planned_km)))
+      .on('pointerleave', () => tt.hide());
+    if (m.week_no) svg.append('line').attr('x1', x(m.week_no) + x.bandwidth() / 2).attr('x2', x(m.week_no) + x.bandwidth() / 2).attr('y1', mg.t - 6).attr('y2', H - mg.b)
+      .attr('stroke', 'var(--fg)').attr('stroke-dasharray', '3 3');
+    const every = Math.max(1, Math.ceil(46 / x.step()));
+    data.filter((d, i) => i % every === 0).forEach((d) => svg.append('text').attr('x', x(d.week) + x.bandwidth() / 2).attr('y', H - 8).attr('text-anchor', 'middle')
+      .text(d.d.toLocaleDateString('nl-BE', {day: 'numeric', month: 'short'})));
+  }
+
+  // ---------- GEZONDHEID ----------
+  function renderHealth(wh) {
+    const rc = $('hRec'), sc = $('hSleep'), wc = $('hWeight');
+    [rc, sc, wc].forEach((c) => c.replaceChildren());
+    if (wh.status !== 'ok') {
+      rc.append(el('div', 'name', 'Whoop'), el('div', 'empty', wh.message || 'Whoop is nog niet gekoppeld. Start whoop_koppelen.bat op de Mac mini.'));
+      $('hChart').replaceChildren(); return;
+    }
+    $('hSub').textContent = 'Uit Whoop, via de Mac mini' + (wh.measured_at ? ' · bijgewerkt ' + when(wh.measured_at) : '');
+    const td = wh.today || {};
+    const colr = (v) => v == null ? 'var(--muted)' : v >= 67 ? 'var(--good)' : v >= 34 ? 'var(--warn)' : 'var(--bad)';
+    rc.append(el('div', 'small muted', 'Herstel vandaag'));
+    const big = el('div', 'ring-big', td.recovery != null ? num(td.recovery) + '%' : '—'); big.style.color = colr(td.recovery); rc.append(big);
+    const dl = el('dl', 'kv');
+    [['HRV', td.hrv != null ? num(td.hrv) + ' ms' : '—'], ['Rustpols', td.rhr != null ? td.rhr + ' bpm' : '—'], ['SpO2', td.spo2 != null ? num(td.spo2, 1) + '%' : '—'],
+     ['Huidtemperatuur', td.skin_temp != null ? num(td.skin_temp, 1) + ' °C' : '—']].forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, v)));
+    rc.append(dl);
+    const ser = wh.series || [];
+    const hrvs = ser.filter((d) => d.hrv).map((d) => d.hrv);
+    if (hrvs.length >= 7 && td.hrv) {
+      const avg = hrvs.slice(-8, -1).reduce((a, b) => a + b, 0) / Math.min(7, hrvs.length - 1);
+      const diff = (td.hrv - avg) / avg * 100;
+      rc.append(el('div', 'small ' + (diff >= 0 ? 'good' : 'warn'), `HRV ${diff >= 0 ? '+' : '−'}${num(Math.abs(diff))}% t.o.v. je weekgemiddelde`));
+    }
+    // slaap
+    sc.append(el('div', 'small muted', 'Slaap afgelopen nacht'));
+    sc.append(el('div', 'big', td.sleep_h ? `${Math.floor(td.sleep_h)}u${String(Math.round((td.sleep_h % 1) * 60)).padStart(2, '0')}` : '—'));
+    const dl2 = el('dl', 'kv');
+    [['Slaapprestatie', td.sleep_perf != null ? num(td.sleep_perf) + '%' : '—'], ['Diepe slaap', td.deep_h ? num(td.deep_h, 1) + ' u' : '—'], ['REM-slaap', td.rem_h ? num(td.rem_h, 1) + ' u' : '—']]
+      .forEach(([k, v]) => dl2.append(el('dt', null, k), el('dd', null, v)));
+    sc.append(dl2);
+    const sl = ser.filter((d) => d.sleep_h).slice(-7);
+    if (sl.length) sc.append(el('div', 'small muted', `Gemiddeld ${num(sl.reduce((a, d) => a + d.sleep_h, 0) / sl.length, 1)} u per nacht (7 dagen)`));
+    // gewicht
+    const wt = wh.weight || {}, hist = wt.history || [];
+    wc.append(el('div', 'small muted', 'Gewicht'));
+    wc.append(el('div', 'big', wt.kg ? num(wt.kg, 1) + ' kg' : '—'));
+    if (wt.kg) {
+      const goal = 95, start = hist.length ? hist[0].kg : wt.kg;
+      const dl3 = el('dl', 'kv');
+      const bmi = wt.height_m ? wt.kg / (wt.height_m * wt.height_m) : null;
+      [['Doel', goal + ' kg'], ['Nog te gaan', num(Math.max(0, wt.kg - goal), 1) + ' kg'], ['Sinds ' + (hist.length ? date(hist[0].date) : 'start'), (wt.kg - start <= 0 ? '−' : '+') + num(Math.abs(wt.kg - start), 1) + ' kg'],
+       ['BMI', bmi ? num(bmi, 1) : '—']].forEach(([k, v]) => dl3.append(el('dt', null, k), el('dd', null, v)));
+      wc.append(dl3);
+      if (hist.length > 1 && window.d3) {
+        const sp = el('div', 'spark'); wc.append(sp);
+        const w = sp.clientWidth || 240, h = 56;
+        const pts = hist.map((p) => ({t: new Date(p.date + 'T12:00:00'), v: p.kg}));
+        const x = d3.scaleTime().domain(d3.extent(pts, (p) => p.t)).range([2, w - 2]);
+        const y = d3.scaleLinear().domain([Math.min(goal, d3.min(pts, (p) => p.v)) - 0.5, d3.max(pts, (p) => p.v) + 0.5]).range([h - 4, 4]);
+        const svg = d3.select(sp).append('svg').attr('width', '100%').attr('height', h).attr('viewBox', `0 0 ${w} ${h}`).attr('role', 'img').attr('aria-label', 'Gewichtsverloop');
+        svg.append('line').attr('x1', 0).attr('x2', w).attr('y1', y(goal)).attr('y2', y(goal)).attr('stroke', 'var(--good)').attr('stroke-dasharray', '3 3');
+        svg.append('path').datum(pts).attr('fill', 'none').attr('stroke', 'var(--c-health)').attr('stroke-width', 1.8).attr('d', d3.line().x((p) => x(p.t)).y((p) => y(p.v)));
+      } else wc.append(el('div', 'small muted', 'Het verloop verschijnt vanaf morgen: het script bewaart elke dag je gewicht.'));
+    }
+    // grafiek herstel + hrv
+    const box = $('hChart'); box.replaceChildren();
+    if (!window.d3 || !ser.length) return;
+    const data = ser.filter((d) => d.recovery != null).map((d) => ({...d, t: new Date(d.date + 'T12:00:00')}));
+    const W2 = box.clientWidth || 600, H = 190, mg = {t: 14, r: 46, b: 24, l: 38};
+    const x = d3.scaleBand().domain(data.map((d) => d.date)).range([mg.l, W2 - mg.r]).padding(0.25);
+    const y = d3.scaleLinear().domain([0, 100]).range([H - mg.b, mg.t]);
+    const yh = d3.scaleLinear().domain([d3.min(data, (d) => d.hrv || 0) * 0.85, d3.max(data, (d) => d.hrv || 0) * 1.1]).range([H - mg.b, mg.t]);
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W2} ${H}`).attr('role', 'img').attr('aria-label', 'Herstel en HRV per dag');
+    [0, 34, 67, 100].forEach((v) => { svg.append('line').attr('x1', mg.l).attr('x2', W2 - mg.r).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', 'var(--line)');
+      svg.append('text').attr('x', mg.l - 4).attr('y', y(v) + 3).attr('text-anchor', 'end').text(v + '%'); });
+    const tt = tip(box);
+    svg.selectAll('rect.r').data(data).join('rect').attr('class', 'r').attr('x', (d) => x(d.date)).attr('width', x.bandwidth())
+      .attr('y', (d) => y(d.recovery)).attr('height', (d) => y(0) - y(d.recovery)).attr('rx', 2).attr('fill', (d) => colr(d.recovery)).attr('opacity', .8)
+      .on('pointerenter pointermove', (ev, d) => tt.show([date(d.date), `herstel ${num(d.recovery)}%`, d.hrv ? `HRV ${num(d.hrv)} ms` : '', d.sleep_h ? `slaap ${num(d.sleep_h, 1)} u` : '', d.strain ? `strain ${num(d.strain, 1)}` : ''].filter(Boolean), x(d.date) + x.bandwidth() / 2, y(d.recovery)))
+      .on('pointerleave', () => tt.hide());
+    const hd = data.filter((d) => d.hrv);
+    svg.append('path').datum(hd).attr('fill', 'none').attr('stroke', 'var(--fg)').attr('stroke-width', 1.6)
+      .attr('d', d3.line().x((d) => x(d.date) + x.bandwidth() / 2).y((d) => yh(d.hrv)));
+    if (hd.length) svg.append('text').attr('x', W2 - mg.r + 4).attr('y', yh(hd[hd.length - 1].hrv) + 3).text(num(hd[hd.length - 1].hrv) + ' ms');
+    const every = Math.max(1, Math.ceil(46 / x.step()));
+    data.filter((d, i) => (data.length - 1 - i) % every === 0).forEach((d) => svg.append('text').attr('x', x(d.date) + x.bandwidth() / 2).attr('y', H - 8).attr('text-anchor', 'middle')
+      .text(d.t.toLocaleDateString('nl-BE', {day: 'numeric', month: 'short'})));
   }
 
   // ---------- SPORT ----------
