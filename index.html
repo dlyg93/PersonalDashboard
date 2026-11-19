@@ -544,7 +544,7 @@
     parts.forEach((p, i) => { if (i) lede.append(i === parts.length - 1 ? ' en ' : ', '); lede.append(...p); });
     if (parts.length) lede.append('.');
 
-    if (view === 'brein') renderBrain(accounts, t, lib, strava, acts, wk, d.marathon || {}, d.whoop || {}, d.agenda || {});
+    if (view === 'brein' && !(window.__brain3d && window.__brain3d.busy)) renderBrain(accounts, t, lib, strava, acts, wk, d.marathon || {}, d.whoop || {}, d.agenda || {});
     else if (window.__brainAnim) { cancelAnimationFrame(window.__brainAnim); window.__brainAnim = null; }
     if (view === 'forex') { renderAccounts(accounts); renderPositions(accounts); renderTrades(accounts); }
     if (view === 'telenet') renderTelenetView(t, lib, d.actions || []);
@@ -642,124 +642,201 @@
       })()
     ];
 
-    // ---- opbouw: knopen en verbindingen; posities worden per beeldje berekend ----
+    // ---- 3D-brein: bollen in een ruimte die je zelf draait (staat stil tot je ermee speelt) ----
     if (window.__brainAnim) cancelAnimationFrame(window.__brainAnim);
+    window.__brainAnim = null;
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const short = (txt, n) => (txt && txt.length > n ? txt.slice(0, n - 1) + '…' : txt);
+    const P0 = narrow ? -0.78 : -0.55;
+    const S = window.__brain3d || (window.__brain3d = {yaw: 0.3, pitch: P0, vy: 0, vp: 0, focus: null, tween: null, px: 0, py: 0, tx: 0, ty: 0});
+    const H = narrow ? 470 : 640;
+    const R = narrow ? W * 0.3 : Math.min(W * 0.24, H * 0.36);
+    const F = R * 7;                       // perspectief
     const nodes = [], links = [];
-    const center = {kind: 'c', r: narrow ? 34 : 42, big: true, color: 'var(--accent)',
-      n: {icon: 'me', label: 'Laurenz', value: '', st: 'none', tip: ['Alles op een rij', 'Klik op een onderwerp']}};
+    const center = {kind: 'c', p: [0, 0, 0], r: narrow ? 28 : 38, big: true, color: 'var(--accent)',
+      n: {icon: 'me', label: 'Laurenz', value: '', st: 'none', tip: ['Alles op een rij', 'Sleep om te draaien, tik een onderwerp']}};
     nodes.push(center);
+    const nT = topics.length;
     topics.forEach((t, ti) => {
-      const tn = {kind: 't', ti, r: narrow ? 30 : 38, big: true, color: t.color,
+      const th = ti * 2 * Math.PI / nT;
+      const ty = (ti % 2 ? 1 : -1) * R * 0.08;
+      const tn = {kind: 't', ti, th, p: [R * Math.sin(th), ty, R * Math.cos(th)], r: narrow ? 25 : 34, big: true, color: t.color,
         n: {icon: t.icon, label: t.label, value: t.value, st: t.st, tip: t.tip, go: t.key}};
       links.push({a: center, b: tn, color: t.color, main: true});
-      t.kids.slice(0, narrow || topics.length > 4 ? 3 : 4).forEach((k, ki, arr) => {
-        const kn = {kind: 'k', ti, ki, nk: arr.length, parent: tn, r: narrow ? 21 : 24, color: t.color,
-          n: {...k, label: short(k.label, narrow ? 11 : 16), go: k.go || t.key}};
+      nodes.push(tn);
+      const kids = t.kids.slice(0, narrow ? 3 : 4);
+      kids.forEach((k, ki) => {
+        // de details hangen in een rij onder hun onderwerp, iets verder naar buiten
+        const off = ki - (kids.length - 1) / 2;
+        const a = th + off * (narrow ? 0.6 : 0.3);
+        const rr = R * 1.5;
+        const kn = {kind: 'k', ti, ki, parent: tn, p: [rr * Math.sin(a), ty + R * (narrow ? 0.5 : 0.38) + Math.abs(off) * R * 0.08, rr * Math.cos(a)],
+          r: narrow ? 17 : 22, color: t.color, n: {...k, label: short(k.label, narrow ? 10 : 16), go: k.go || t.key}};
         links.push({a: tn, b: kn, color: t.color});
         nodes.push(kn);
       });
-      nodes.push(tn);
+    });
+    // sfeer: een wolk van kleine 'neuronen' in de vorm van een brein, met dunne verbindingen
+    const neurons = [];
+    const NN = narrow ? 46 : 70, ga = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < NN; i++) {
+      const y = 1 - (i / (NN - 1)) * 2, rad = Math.sqrt(1 - y * y), th = ga * i;
+      const wob = 1 + 0.12 * Math.sin(i * 12.9898);
+      neurons.push({p: [Math.cos(th) * rad * R * 1.7 * wob, y * R * (narrow ? 1.1 : 0.95) * wob, Math.sin(th) * rad * R * 1.5 * wob]});
+    }
+    const nLinks = [];
+    neurons.forEach((a, i) => {
+      neurons.map((b, j) => [j, (a.p[0] - b.p[0]) ** 2 + (a.p[1] - b.p[1]) ** 2 + (a.p[2] - b.p[2]) ** 2])
+        .filter(([j]) => j > i).sort((x, y) => x[1] - y[1]).slice(0, 2).forEach(([j]) => nLinks.push([a, neurons[j]]));
     });
 
-    // posities op tijdstip s (seconden)
-    const R = 185, R2 = 120, spread = topics.length > 4 ? 48 : 44, SPEED = 360 / 160;   // één rondje per 160 s
-    const rowH = 150, X0 = 46, KX = [140, 225, 310];
-    const rad = (d) => d * Math.PI / 180;
-    function place(s) {
-      nodes.forEach((d) => {
-        const ph = (d.ti || 0) * 1.7 + (d.ki || 0) * 0.9;
-        if (narrow) {
-          const fy = reduce ? 0 : Math.sin(s * 0.9 + ph) * 3, fx = reduce ? 0 : Math.cos(s * 0.7 + ph) * 2;
-          if (d.kind === 'c') { d.x = X0; d.y = 0; }
-          else if (d.kind === 't') { d.x = X0 + fx * 0.5; d.y = 120 + d.ti * rowH + fy * 0.5; }
-          else { d.x = KX[d.ki] + fx; d.y = 120 + d.ti * rowH + fy; }
-          return;
-        }
-        const rot = reduce ? 0 : s * SPEED;
-        if (d.kind === 'c') { d.x = 0; d.y = reduce ? 0 : Math.sin(s * 0.8) * 2; return; }
-        const ta = -90 + d.ti * 360 / topics.length + rot;
-        const breathe = reduce ? 0 : Math.sin(s * 0.6 + d.ti) * 6;
-        if (d.kind === 't') { d.x = (R + breathe) * Math.cos(rad(ta)); d.y = (R + breathe) * Math.sin(rad(ta)); return; }
-        const p = d.parent;
-        const wob = reduce ? 0 : Math.sin(s * 1.1 + ph) * 5;
-        const ka = ta + (d.ki - (d.nk - 1) / 2) * spread + wob;
-        d.x = p.x + R2 * Math.cos(rad(ka)); d.y = p.y + R2 * Math.sin(rad(ka));
-      });
-    }
-
-    // vast kader, groot genoeg voor een volledige omwenteling
-    let vx, vy, vw, vh;
-    if (narrow) { vx = -24; vy = -50; vw = 400; vh = 120 + (topics.length - 1) * rowH + 135; }
-    else { const E = R + 8 + R2 + 24 + 50; vx = -E; vy = -E + 10; vw = 2 * E; vh = 2 * E - 10; }
-    const svg = d3.select(box).append('svg').attr('viewBox', `${vx} ${vy} ${vw} ${vh}`)
-      .style('max-height', narrow ? 'none' : '640px')
+    const VY = -H / 2 + R * (narrow ? 0.12 : 0.22);   // iets hoger: de voorkant zakt door het kantelen
+    const svg = d3.select(box).append('svg').attr('viewBox', `${-W / 2} ${VY} ${W} ${H}`).style('touch-action', 'none').style('cursor', 'grab')
       .attr('role', 'img').attr('aria-label', 'Brein: ' + topics.map((t) => `${t.label} ${t.value}`).join(', '));
-    // zachte gloed achter het centrum
     const defs = svg.append('defs');
     const gr = defs.append('radialGradient').attr('id', 'glow');
-    gr.append('stop').attr('offset', '0%').attr('stop-color', 'var(--accent)').attr('stop-opacity', .22);
+    gr.append('stop').attr('offset', '0%').attr('stop-color', 'var(--accent)').attr('stop-opacity', .25);
     gr.append('stop').attr('offset', '100%').attr('stop-color', 'var(--accent)').attr('stop-opacity', 0);
-    if (!narrow) svg.append('circle').attr('r', R + 40).attr('fill', 'url(#glow)');
-    if (!narrow) svg.append('circle').attr('r', R).attr('fill', 'none').attr('stroke', 'var(--line)').attr('stroke-dasharray', '2 6');
-    const gLinks = svg.append('g'), gNodes = svg.append('g');
+    svg.append('ellipse').attr('rx', R * 1.9).attr('ry', R * 1.45).attr('fill', 'url(#glow)');
+    const gNeu = svg.append('g'), gLinks = svg.append('g'), gNodes = svg.append('g');
+    const nLineEls = nLinks.map(() => gNeu.append('line').attr('stroke', 'var(--accent)').attr('stroke-width', 0.7));
+    const nDotEls = neurons.map(() => gNeu.append('circle').attr('r', 1.6).attr('fill', 'var(--accent)'));
+    const linkEls = links.map((l) => gLinks.append('line').attr('stroke', l.color).attr('stroke-width', l.main ? 2.4 : 1.4).attr('stroke-dasharray', l.main ? null : '3 4'));
     const tt = tip(box);
-    let paused = false, hoverNode = null;
+    let hoverNode = null, mouse = null, dragging = false, down = null, running = false;
 
-    const linkEls = links.map((l) => gLinks.append('path').attr('fill', 'none').attr('stroke', l.color)
-      .attr('stroke-opacity', l.main ? .45 : .3).attr('stroke-width', l.main ? 2.5 : 1.5).attr('stroke-dasharray', l.main ? null : '3 4'));
-    // lichtpuntjes die over de hoofdlijnen reizen
-    const sparks = reduce ? [] : links.filter((l) => l.main).map((l) => gLinks.append('circle').attr('r', 3).attr('fill', l.color).attr('opacity', .9));
+    const go = (n) => { if (n.f) { filter = n.f; syncChips(); } if (n.go) location.hash = n.go; };
+    const nearest = (a, b) => b + Math.round((a - b) / (2 * Math.PI)) * 2 * Math.PI;
+    function focusTopic(ti) {
+      S.focus = ti;
+      const target = ti == null ? 0.3 : nearest(S.yaw, -nodes.find((d) => d.kind === 't' && d.ti === ti).th);
+      S.vy = S.vp = 0;
+      S.tween = reduce ? null : {y0: S.yaw, y1: target, p0: S.pitch, p1: ti == null ? P0 : P0 * (narrow ? 0.6 : 0.4), t0: performance.now(), dur: 750};
+      if (reduce) { S.yaw = target; S.pitch = ti == null ? P0 : P0 * (narrow ? 0.6 : 0.4); }
+      kick();
+    }
+    function activate(d) {
+      if (d.kind === 'c') { focusTopic(null); return; }
+      if (S.focus === d.ti) go(d.n); else focusTopic(d.ti);
+    }
 
     nodes.forEach((d) => {
       const {r, big, color, n} = d;
-      const g = gNodes.append('g').attr('class', 'node').attr('tabindex', 0).attr('role', 'button').attr('aria-label', `${n.label}: ${n.value || ''}`);
+      const g = gNodes.append('g').datum(d).attr('class', 'node').attr('tabindex', 0).attr('role', 'button')
+        .attr('aria-label', `${n.label}: ${n.value || ''}${d.kind === 'c' ? '' : '. Enter om in te zoomen, nog eens om te openen.'}`);
       if (n.st === 'warn' || n.st === 'bad') g.append('circle').attr('class', 'pulse').attr('r', r).attr('fill', 'none').attr('stroke', status(n.st)).attr('stroke-width', 2);
       g.append('circle').attr('class', 'disc').attr('r', r).attr('fill', 'var(--panel)');
-      g.append('circle').attr('r', r).attr('fill', color).attr('opacity', .16);
+      g.append('circle').attr('r', r).attr('fill', color).attr('opacity', .18);
       g.append('circle').attr('class', 'ring').attr('r', r).attr('fill', 'none').attr('stroke', n.st && n.st !== 'none' ? status(n.st) : color).attr('stroke-width', big ? 3 : 2);
       const sz = Math.round(r * 0.95);
       g.append('g').attr('transform', `translate(${-sz / 2},${-sz / 2})`).style('color', color)
         .html(`<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="${big ? 1.8 : 2}" stroke-linecap="round" stroke-linejoin="round">${ICONS[n.icon]}</svg>`);
-      g.append('text').attr('class', 'lbl').attr('text-anchor', 'middle').attr('y', r + 16).style('font-size', big ? '14px' : '12.5px').text(n.label);
-      if (n.value) g.append('text').attr('class', 'val').attr('text-anchor', 'middle').attr('y', r + 31).text(n.value);
-      const go = () => { if (n.f) { filter = n.f; syncChips(); } if (n.go) location.hash = n.go; };
-      g.on('click', go).on('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(); } });
-      const showTip = () => { const k = box.clientWidth / vw; if (n.tip) tt.show(n.tip, (d.x - vx) * k, (d.y - vy - r) * k); };
-      g.on('pointerenter focus', () => { hoverNode = d; paused = true; showTip(); })
-       .on('pointerleave blur', () => { hoverNode = null; paused = false; tt.hide(); });
+      g.append('text').attr('class', 'lbl').attr('text-anchor', 'middle').attr('y', r + 15).style('font-size', big ? (narrow ? '12.5px' : '14px') : (narrow ? '11px' : '12.5px')).text(n.label);
+      if (n.value) g.append('text').attr('class', 'val').attr('text-anchor', 'middle').attr('y', r + 29).style('font-size', narrow ? '10.5px' : '12px').text(n.value);
+      g.on('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); activate(d); } })
+       .on('pointerenter focus', () => { hoverNode = d; kick(); })
+       .on('pointerleave blur', () => { if (hoverNode === d) hoverNode = null; tt.hide(); kick(); });
       d.g = g;
     });
 
-    function draw(s) {
-      place(s);
-      nodes.forEach((d) => d.g.attr('transform', `translate(${d.x.toFixed(1)},${d.y.toFixed(1)})`));
+    // projectie: draaien (yaw, pitch) en perspectief
+    function project(p, yaw, pitch) {
+      const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+      const x1 = p[0] * cy + p[2] * sy, z1 = -p[0] * sy + p[2] * cy;
+      const y1 = p[1] * cp - z1 * sp, z2 = p[1] * sp + z1 * cp;
+      const s = F / (F - z2);
+      return [x1 * s, y1 * s, z2, s];
+    }
+    const toView = (ev) => { const b = svg.node().getBoundingClientRect(); return [(ev.clientX - b.left) / b.width * W - W / 2, (ev.clientY - b.top) / b.height * H + VY]; };
+
+    function draw() {
+      const yaw = S.yaw + S.px, pitch = S.pitch + S.py;
+      const depth = (z) => Math.max(0, Math.min(1, (z + R * 1.9) / (R * 3.8)));
+      neurons.forEach((nn, i) => { const [x, y, z, s] = project(nn.p, yaw, pitch); nn.x = x; nn.y = y; nn.z = z;
+        nDotEls[i].attr('cx', x).attr('cy', y).attr('r', 1.3 * s).attr('opacity', .12 + .45 * depth(z)); });
+      nLinks.forEach(([a, b], i) => nLineEls[i].attr('x1', a.x).attr('y1', a.y).attr('x2', b.x).attr('y2', b.y).attr('opacity', .05 + .14 * depth((a.z + b.z) / 2)));
+      let hoverAnim = false;
+      nodes.forEach((d) => {
+        let [x, y, z, s] = project(d.p, yaw, pitch);
+        let boost = 1;
+        if (mouse && !dragging && d.kind !== 'c') {
+          const dist = Math.hypot(mouse[0] - x, mouse[1] - y), reach = narrow ? 80 : 120;
+          if (dist < reach) { const k = 1 - dist / reach; boost += 0.22 * k; x += (mouse[0] - x) * 0.08 * k; y += (mouse[1] - y) * 0.08 * k; }
+        }
+        if (hoverNode === d) boost += 0.1;
+        const tb = d.boost == null ? boost : d.boost + (boost - d.boost) * 0.25;
+        if (Math.abs(tb - boost) > 0.002) hoverAnim = true;
+        d.boost = tb; d.x = x; d.y = y; d.z = z; d.s = s;
+        const inFocus = S.focus == null || d.kind === 'c' || d.ti === S.focus;
+        // op een gsm tonen we de details pas als je een onderwerp aantikt
+        const hidden = narrow && d.kind === 'k' && S.focus !== d.ti;
+        const op = hidden ? 0 : (0.35 + 0.65 * depth(z)) * (inFocus ? 1 : 0.28);
+        d.g.style('pointer-events', hidden ? 'none' : null);
+        d.g.attr('transform', `translate(${x.toFixed(1)},${y.toFixed(1)}) scale(${(s * tb * (S.focus != null && d.ti === S.focus && d.kind === 'k' ? 1.12 : 1)).toFixed(3)})`).attr('opacity', op.toFixed(2));
+      });
       links.forEach((l, i) => {
-        const {a, b} = l;
-        const p = l.main || narrow ? `M${a.x},${a.y} L${b.x},${b.y}`
-          : `M${a.x},${a.y} Q${(a.x + b.x) / 2 + (b.y - a.y) * 0.12},${(a.y + b.y) / 2 - (b.x - a.x) * 0.12} ${b.x},${b.y}`;
-        linkEls[i].attr('d', p);
+        const inFocus = S.focus == null || l.b.ti === S.focus;
+        if (narrow && !l.main && S.focus !== l.b.ti) { linkEls[i].attr('stroke-opacity', 0); return; }
+        linkEls[i].attr('x1', l.a.x).attr('y1', l.a.y).attr('x2', l.b.x).attr('y2', l.b.y)
+          .attr('stroke-opacity', ((l.main ? .5 : .35) * (0.4 + 0.6 * depth((l.a.z + l.b.z) / 2)) * (inFocus ? 1 : 0.3)).toFixed(2));
       });
-      sparks.forEach((c, i) => {
-        const l = links.filter((x) => x.main)[i];
-        const f = ((s * 0.35 + i / 3) % 1);
-        c.attr('cx', l.a.x + (l.b.x - l.a.x) * f).attr('cy', l.a.y + (l.b.y - l.a.y) * f).attr('opacity', Math.sin(f * Math.PI) * .9);
-      });
+      gNodes.selectAll('g.node').sort((a, b) => a.z - b.z);
+      if (hoverNode) {
+        const b = svg.node().getBoundingClientRect(), k = b.width / W;
+        tt.show(hoverNode.n.tip || [hoverNode.n.label], (hoverNode.x + W / 2) * k, (hoverNode.y - VY - hoverNode.r * hoverNode.s * hoverNode.boost) * k);
+      }
+      return hoverAnim;
     }
-    // de klok loopt door, maar staat stil zolang je over een bol hangt
-    let s = (window.__brainClock || 0), last = performance.now();
-    draw(s);
-    if (!reduce) {
-      const tick = (now) => {
-        const dt = Math.min(0.1, (now - last) / 1000); last = now;
-        if (!paused && !document.hidden) { s += dt; window.__brainClock = s; draw(s); }
-        else if (hoverNode && !document.hidden) { /* stil */ }
-        window.__brainAnim = requestAnimationFrame(tick);
-      };
-      window.__brainAnim = requestAnimationFrame(tick);
+
+    function frame(now) {
+      let moving = false;
+      if (S.tween) {
+        const k = Math.min(1, (now - S.tween.t0) / S.tween.dur), e = 1 - Math.pow(1 - k, 3);
+        S.yaw = S.tween.y0 + (S.tween.y1 - S.tween.y0) * e; S.pitch = S.tween.p0 + (S.tween.p1 - S.tween.p0) * e;
+        if (k >= 1) S.tween = null; else moving = true;
+      } else if (!dragging && (Math.abs(S.vy) > 1e-4 || Math.abs(S.vp) > 1e-4)) {
+        S.yaw += S.vy; S.pitch = Math.max(-0.72, Math.min(-0.15, S.pitch + S.vp)); S.vy *= 0.94; S.vp *= 0.9; moving = true;
+      }
+      // kantelen in de richting van je muis (parallax)
+      const ex = S.tx - S.px, ey = S.ty - S.py;
+      if (Math.abs(ex) > 1e-4 || Math.abs(ey) > 1e-4) { S.px += ex * 0.08; S.py += ey * 0.08; moving = true; }
+      if (draw()) moving = true;
+      if (moving || dragging) window.__brainAnim = requestAnimationFrame(frame);
+      else { window.__brainAnim = null; running = false; }
     }
-    box.append(el('div', 'hint', 'Klik op een bol om in te zoomen. Hang erover om het brein even stil te zetten. Een knipperende rand vraagt aandacht.'));
+    function kick() { if (!running) { running = true; window.__brainAnim = requestAnimationFrame(frame); } }
+
+    svg.on('pointermove', (ev) => {
+      mouse = toView(ev);
+      if (!reduce) { S.tx = (mouse[0] / W) * 0.35; S.ty = -((mouse[1] - VY - H / 2) / H) * 0.22; }
+      if (down) {
+        const dx = ev.clientX - down.x, dy = ev.clientY - down.y;
+        if (!dragging && Math.hypot(dx, dy) > 5) { dragging = true; S.tween = null; svg.style('cursor', 'grabbing'); tt.hide(); }
+        if (dragging) {
+          const ddx = ev.clientX - down.lx, ddy = ev.clientY - down.ly;
+          S.yaw += ddx * 0.008; S.pitch = Math.max(-0.72, Math.min(-0.15, S.pitch + ddy * 0.006));
+          S.vy = ddx * 0.008; S.vp = ddy * 0.006;
+          down.lx = ev.clientX; down.ly = ev.clientY;
+        }
+      }
+      kick();
+    }).on('pointerdown', (ev) => {
+      down = {x: ev.clientX, y: ev.clientY, lx: ev.clientX, ly: ev.clientY, node: ev.target.closest && ev.target.closest('g.node') ? d3.select(ev.target.closest('g.node')).datum() : null};
+      try { svg.node().setPointerCapture(ev.pointerId); } catch (e) {}
+      S.vy = S.vp = 0; S.busy = true;
+    }).on('pointerup pointercancel', (ev) => {
+      const wasDrag = dragging, d = down && down.node; S.busy = false;
+      dragging = false; down = null; svg.style('cursor', 'grab');
+      if (reduce) { S.vy = S.vp = 0; }
+      if (!wasDrag && ev.type === 'pointerup') { if (d) activate(d); else if (S.focus != null) focusTopic(null); }
+      kick();
+    }).on('pointerleave', () => { mouse = null; S.tx = 0; S.ty = 0; hoverNode = null; tt.hide(); kick(); });
+
+    draw();
+    if (S.vy || S.vp || S.tween) kick();
+    box.append(el('div', 'hint', narrow
+      ? 'Sleep om te draaien. Tik een onderwerp om het naar voren te halen, tik nog eens om het te openen. Tik naast de bollen om terug te gaan.'
+      : 'Sleep om het brein te draaien. Klik een onderwerp om het naar voren te halen, klik nog eens om het te openen. Klik naast de bollen om terug te gaan. Een knipperende rand vraagt aandacht.'));
   }
 
   // ---------- FOREX ----------
