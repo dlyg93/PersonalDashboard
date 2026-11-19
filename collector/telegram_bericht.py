@@ -93,23 +93,6 @@ def compose(data, dashboard_url=None):
             tot = f" ({'+' if (a.get('total_pl') or 0) >= 0 else '−'}{_num(abs(a['total_pl'] / a['start_balance'] * 100))}% sinds start)" if a.get("total_pl") is not None and a.get("start_balance") else ""
             lines.append(f"📈 {a['name']}: {_money(a.get('equity'), a.get('currency'))}{tot}" + (f", {a['open_positions']} open" if a.get("open_positions") else ""))
 
-    tv = data.get("telenet") or {}
-    if tv.get("status") == "ok":
-        can = 0.0
-        now = datetime.now().timestamp()
-        for it in tv.get("library", []):
-            for e in it.get("episodes", []):
-                if e.get("status") == "planned":
-                    continue
-                old = False
-                try:
-                    old = now - datetime.fromisoformat(str(e.get("start")).replace("Z", "+00:00")).timestamp() > 182.5 * 86400
-                except ValueError:
-                    pass
-                if e.get("watched") == "alreadyWatched" or (e.get("watched") == "notWatched" and old):
-                    can += e.get("hours") or 0
-        lines.append(f"📺 Telenet {_num(tv.get('used_pct'), 0)}% vol" + (f" — {_num(can)} u kan weg" if can > 0.05 else ""))
-
     if dashboard_url:
         lines.append("")
         lines.append(f'<a href="{dashboard_url}">Open je dashboard</a>')
