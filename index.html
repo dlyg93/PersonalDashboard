@@ -332,7 +332,10 @@
   // lezen: drive.readonly; opdrachten schrijven: drive.file (enkel bestanden die dit dashboard zelf maakt)
   const SCOPE = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file';
   const CMD_FOLDER = 'Dashboard-opdrachten';
-  const JARVIS_URL = CFG.jarvisUrl || 'https://t.me/DailyLaurenz_bot';
+  // gsm: de Telegram-app; computer: Telegram Web (de t.me-pagina doet niets zonder Telegram Desktop)
+  const JARVIS_BOT = CFG.jarvisBot || 'DailyLaurenz_bot';
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+  const JARVIS_URL = CFG.jarvisUrl || (isMobile ? 'https://t.me/' + JARVIS_BOT : 'https://web.telegram.org/k/#@' + JARVIS_BOT);
   const openJarvis = () => window.open(JARVIS_URL, '_blank', 'noopener');
   const HALF_YEAR = 182.5 * 864e5;
   let token = null, tokenExp = 0, tokenClient = null, timer = null, lastData = null, fileId = CFG.fileId;
