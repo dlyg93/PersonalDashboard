@@ -296,6 +296,10 @@
         <div class="name">Komende 14 dagen</div>
         <div id="aList"></div>
       </div>
+      <div class="two">
+        <div class="card" id="aMail"></div>
+        <div class="card" id="aDoccle"></div>
+      </div>
     </section>
   </main>
 </div>
@@ -363,6 +367,8 @@
     flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
     check: '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+    doc: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
     mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>',
     cake: '<path d="M4 21h16M5 21v-7a2 2 0 012-2h10a2 2 0 012 2v7"/><path d="M5 16c2 1.5 4 1.5 7 0s5-1.5 7 0M12 12V9M12 6.5c-.8-.8-.8-2 0-3 .8 1 .8 2.2 0 3z"/>'
   };
@@ -561,17 +567,17 @@
     parts.forEach((p, i) => { if (i) lede.append(i === parts.length - 1 ? ' en ' : ', '); lede.append(...p); });
     if (parts.length) lede.append('.');
 
-    if (view === 'brein' && !(window.__brain3d && window.__brain3d.busy)) renderBrain(accounts, t, lib, strava, acts, wk, d.marathon || {}, d.whoop || {}, d.agenda || {});
+    if (view === 'brein' && !(window.__brain3d && window.__brain3d.busy)) renderBrain(accounts, t, lib, strava, acts, wk, d.marathon || {}, d.whoop || {}, d.agenda || {}, d.mail || {});
     else if (window.__brainAnim) { cancelAnimationFrame(window.__brainAnim); window.__brainAnim = null; }
     if (view === 'forex') { renderAccounts(accounts); renderPositions(accounts); renderTrades(accounts); }
     if (view === 'telenet') renderTelenetView(t, lib, d.actions || []);
     if (view === 'sport') { renderMarathon(d.marathon || {}); renderStrava(strava, acts, wk); }
     if (view === 'gezondheid') renderHealth(d.whoop || {});
-    if (view === 'agenda') renderAgenda(d.agenda || {});
+    if (view === 'agenda') { renderAgenda(d.agenda || {}); renderMail(d.mail || {}); }
   }
 
   // ---------- BREIN ----------
-  function renderBrain(accounts, t, lib, strava, acts, wk, mar, wh, ag) {
+  function renderBrain(accounts, t, lib, strava, acts, wk, mar, wh, ag, ml) {
     const box = $('brain'); box.replaceChildren();
     const W = box.clientWidth || 360, narrow = W < 560;
 
@@ -654,7 +660,10 @@
               tip: today.length ? ['Vandaag', ...today.slice(0, 5).map(evLine)] : ['Vandaag', 'geen afspraken']},
             nextEv ? {icon: 'clock', label: 'Volgende', value: evWhen(nextEv), st: 'none', go: 'agenda', tip: [nextEv.title, evWhen(nextEv) + (nextEv.location ? ' · ' + nextEv.location : '')]} : null,
             b ? {icon: 'cake', label: b.name.split(' ')[0], value: b.days === 0 ? 'vandaag!' : b.days === 1 ? 'morgen' : `over ${b.days} d`, st: b.days <= 1 ? 'warn' : 'none', go: 'agenda',
-              tip: ['Verjaardag', b.name + (b.age ? ` wordt ${b.age}` : ''), day(b.date)]} : null
+              tip: ['Verjaardag', b.name + (b.age ? ` wordt ${b.age}` : ''), day(b.date)]} : null,
+            ml.status === 'ok' ? (() => { const dn = (ml.doccle || []).filter((x) => !x.read).length;
+              return {icon: 'mail', label: 'Mail', value: `${ml.unread} ongelezen`, st: dn ? 'warn' : 'none', go: 'agenda',
+                tip: ['Hotmail', `${ml.unread} ongelezen`, dn ? `${dn} nieuw Doccle-document(en)` : 'geen nieuwe Doccle-documenten']}; })() : null
           ].filter(Boolean) : []};
       })()
     ];
@@ -1359,6 +1368,44 @@
       }
       lc.append(evRow(e));
     });
+  }
+
+  // ---------- MAIL & DOCCLE ----------
+  function mailRow(x, title) {
+    const r = el('div', 'ev');
+    const d = new Date(x.at);
+    r.append(el('div', 'tm', isNaN(d) ? '' : (key(d) === key(new Date()) ? x.at.slice(11, 16) : d.toLocaleDateString('nl-BE', {day: 'numeric', month: 'short'}))));
+    const ti = el('div', 'ti'); ti.style.borderLeftColor = x.read ? 'var(--line)' : 'var(--accent)';
+    const t = el('div', null, title || x.subject); if (!x.read) t.style.fontWeight = '600';
+    ti.append(t);
+    const meta = [title ? null : x.from, x.attach ? '📎' : null, x.invoice ? 'factuur?' : null].filter(Boolean).join(' · ');
+    if (meta) ti.append(el('div', 'm', meta));
+    r.append(ti); return r;
+  }
+  function renderMail(ml) {
+    const mc = $('aMail'), dc = $('aDoccle');
+    mc.replaceChildren(); dc.replaceChildren();
+    if (ml.status !== 'ok') {
+      mc.append(el('div', 'name', 'Mail'), el('div', 'empty', ml.message || 'Hotmail nog niet gekoppeld. Start mail_koppelen.bat op de Mac mini.'));
+      dc.append(el('div', 'name', 'Doccle'), el('div', 'empty', 'Verschijnt zodra je Hotmail gekoppeld is: het dashboard leest de meldingsmails van Doccle.'));
+      return;
+    }
+    const top = el('div', 'card-top'); top.append(el('span', 'name', 'Mail'), el('span', 'small muted', 'Hotmail · alleen lezen'));
+    mc.append(top, el('div', 'big', `${ml.unread} ongelezen`));
+    const inv = (ml.invoices || []).filter((x) => !x.read);
+    if (inv.length) mc.append(el('div', 'small warn', `${inv.length} ongelezen mail(s) over een factuur of betaling`));
+    const list = (ml.recent || []).filter((x) => !x.doccle).slice(0, 8);
+    if (!list.length) mc.append(el('div', 'empty', 'Postvak IN is leeg.'));
+    list.forEach((x) => mc.append(mailRow(x)));
+    if (ml.message) mc.append(el('div', 'small muted', ml.message));
+    const t2 = el('div', 'card-top'); t2.append(el('span', 'name', 'Doccle'), el('span', 'small muted', 'laatste 45 dagen'));
+    dc.append(t2);
+    const docs = ml.doccle || [];
+    const nw = docs.filter((x) => !x.read).length;
+    dc.append(el('div', 'big', nw ? `${nw} nieuw` : 'Niets nieuws'));
+    dc.append(el('div', 'small muted', 'Uit de meldingsmails van Doccle. Het document zelf open je in de Doccle-app.'));
+    if (!docs.length) dc.append(el('div', 'empty', 'Geen Doccle-meldingen gevonden.'));
+    docs.slice(0, 8).forEach((x) => dc.append(mailRow(x, x.doccle_sender || x.subject)));
   }
 
   // ---------- SPORT ----------
