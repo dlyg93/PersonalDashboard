@@ -14,17 +14,14 @@
 <link rel="manifest" href="manifest.webmanifest">
 <style>
   :root {
-    --bg: #0f1115; --panel: #171a21; --panel2: #1d212b; --line: #262b36; --fg: #e8eaf0; --muted: #8b93a7;
-    --accent: #3b82f6; --good: #22c55e; --bad: #ef4444; --warn: #f59e0b; --bar-bg: #232835; --bar-muted: #3a4152;
+    --bg: #04070d; --panel: #0a111d; --panel2: #0e1828; --line: #172437; --fg: #e6f1ff; --muted: #7f93ad;
+    --accent: #2f9bff; --glow: #7cc8ff; --good: #22c55e; --bad: #ef4444; --warn: #f59e0b; --bar-bg: #232835; --bar-muted: #3a4152;
     --c-forex: #eab308; --c-telenet: #a78bfa; --c-sport: #fb6a2c; --c-health: #ec4899; --c-agenda: #38bdf8;
     --radius: 12px;
   }
-  @media (prefers-color-scheme: light) {
-    :root { --bg: #f5f6f8; --panel: #ffffff; --panel2: #f3f4f7; --line: #e3e6ec; --fg: #161a22; --muted: #667085; --bar-bg: #eceef2; --bar-muted: #c9ced8;
-      --c-forex: #ca8a04; --c-telenet: #7c3aed; --c-sport: #ea580c; --c-health: #db2777; --c-agenda: #0284c7; }
-  }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  html { background: var(--bg); color-scheme: dark; }
+  body { margin: 0; min-height: 100vh; background: radial-gradient(1200px 700px at 50% -10%, rgba(47,155,255,.13), transparent 70%), var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   .wrap { max-width: 1100px; margin: 0 auto; padding: 16px 16px 96px; }
   header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
   h1 { font-size: 22px; font-weight: 600; margin: 0; }
@@ -44,7 +41,10 @@
   .alert.err { border-color: var(--bad); }
   .alert.ok { border-color: var(--good); }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; }
+  .card { background: linear-gradient(180deg, rgba(16,28,46,.78), rgba(9,15,26,.86)); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0;
+    box-shadow: inset 0 1px 0 rgba(124,200,255,.06), 0 10px 30px rgba(0,0,0,.35); }
+  .card:hover { border-color: #1f3a5a; }
+  .big { text-shadow: 0 0 18px rgba(124,200,255,.18); }
   .card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .name { font-weight: 600; }
   .big { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; margin: 4px 0; letter-spacing: -0.01em; }
@@ -78,18 +78,20 @@
   nav.tabs { display: flex; gap: 6px; margin: 14px 0 4px; overflow-x: auto; padding-bottom: 2px; }
   nav.tabs a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); text-decoration: none; white-space: nowrap; font-size: 14px; }
   nav.tabs a svg { width: 16px; height: 16px; }
-  nav.tabs a.on { background: var(--panel); color: var(--fg); border-color: var(--muted); }
+  nav.tabs a.on { background: rgba(47,155,255,.12); color: var(--fg); border-color: rgba(124,200,255,.55); box-shadow: 0 0 14px rgba(47,155,255,.25); }
 
   /* brein */
-  .brain { position: relative; background: radial-gradient(circle at 50% 45%, var(--panel2), var(--bg) 70%); border: 1px solid var(--line); border-radius: var(--radius); }
-  .brain svg { display: block; width: 100%; }
+  .brain { position: relative; overflow: hidden; background: radial-gradient(circle at 50% 46%, rgba(40,120,210,.28), rgba(10,30,60,.25) 32%, #03060b 68%); border: 1px solid #0f2034; border-radius: var(--radius); }
+  .brain canvas.cloud { position: absolute; left: 0; top: 0; pointer-events: none; }
+  .brain svg { display: block; width: 100%; position: relative; }
   .brain .node { cursor: pointer; }
   .brain .node:focus { outline: none; }
   .brain .node:focus-visible circle.ring { stroke-width: 4; }
   .brain .node:hover circle.disc { filter: brightness(1.25); }
-  .brain text.lbl { fill: var(--fg); font-size: 13px; font-weight: 600; }
-  .brain text.val { fill: var(--muted); font-size: 12px; }
-  .brain .hint { padding: 0 12px 10px; font-size: 12px; color: var(--muted); }
+  .brain text.lbl { fill: #e8f5ff; font-size: 13px; font-weight: 600; paint-order: stroke; stroke: rgba(3,6,11,.85); stroke-width: 3px; }
+  .brain text.val { fill: #8fb8e0; font-size: 12px; paint-order: stroke; stroke: rgba(3,6,11,.85); stroke-width: 3px; }
+  .brain .hint { position: relative; padding: 0 12px 10px; font-size: 12px; color: #6f8bab; }
+  .brain .tip { background: rgba(6,14,26,.92); border-color: #1d3554; color: #e6f1ff; box-shadow: 0 0 20px rgba(47,155,255,.2); }
   @media (prefers-reduced-motion: no-preference) {
     .brain .pulse { animation: pulse 2.2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
     @keyframes pulse { 0% { opacity: .55; transform: scale(1); } 100% { opacity: 0; transform: scale(1.55); } }
@@ -702,32 +704,42 @@
         nodes.push(kn);
       });
     });
-    // sfeer: een wolk van kleine 'neuronen' in de vorm van een brein, met dunne verbindingen
-    const neurons = [];
-    const NN = narrow ? 46 : 70, ga = Math.PI * (3 - Math.sqrt(5));
-    for (let i = 0; i < NN; i++) {
-      const y = 1 - (i / (NN - 1)) * 2, rad = Math.sqrt(1 - y * y), th = ga * i;
-      const wob = 1 + 0.12 * Math.sin(i * 12.9898);
-      neurons.push({p: [Math.cos(th) * rad * R * 1.7 * wob, y * R * (narrow ? 1.1 : 0.95) * wob, Math.sin(th) * rad * R * 1.5 * wob]});
+    // sfeer: een gloeiende wolk van deeltjes en draadjes (canvas achter de bollen)
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const NP = narrow ? 520 : 1100, RC = R * (narrow ? 1.45 : 1.42);
+    const unit = () => { const u = rnd() * 2 - 1, a = rnd() * 2 * Math.PI, q = Math.sqrt(1 - u * u); return [q * Math.cos(a), u, q * Math.sin(a)]; };
+    const hubs = Array.from({length: 16}, unit);
+    const pts = [];
+    for (let i = 0; i < NP; i++) {
+      let v = unit();
+      if (rnd() < 0.55) { const h = hubs[(rnd() * hubs.length) | 0]; v = [h[0] + (rnd() - .5) * .5, h[1] + (rnd() - .5) * .5, h[2] + (rnd() - .5) * .5]; }
+      const L = Math.hypot(v[0], v[1], v[2]) || 1, rr = RC * (rnd() < 0.8 ? 0.9 + rnd() * 0.18 : 0.4 + rnd() * 0.5);
+      pts.push({p: [v[0] / L * rr * 1.08, v[1] / L * rr * 0.86, v[2] / L * rr * 1.08], tw: rnd() * 6.28, star: rnd() < 0.06});
     }
-    const nLinks = [];
-    neurons.forEach((a, i) => {
-      neurons.map((b, j) => [j, (a.p[0] - b.p[0]) ** 2 + (a.p[1] - b.p[1]) ** 2 + (a.p[2] - b.p[2]) ** 2])
-        .filter(([j]) => j > i).sort((x, y) => x[1] - y[1]).slice(0, 2).forEach(([j]) => nLinks.push([a, neurons[j]]));
-    });
+    const segs = [], tris = [], lim = (RC * 0.3) ** 2;
+    for (let i = 0; i < NP; i++) {
+      const a = pts[i].p, near = [];
+      for (let j = i + 1; j < NP; j++) { const b = pts[j].p, d = (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2; if (d < lim) near.push([j, d]); }
+      near.sort((x, y) => x[1] - y[1]);
+      near.slice(0, 3).forEach(([j]) => segs.push(i, j));
+      if (near.length >= 2 && rnd() < 0.14) tris.push(i, near[0][0], near[1][0]);
+    }
+    const PX = new Float32Array(NP), PY = new Float32Array(NP), PZ = new Float32Array(NP);
 
     const VY = -H / 2 + R * (narrow ? 0.12 : 0.22);   // iets hoger: de voorkant zakt door het kantelen
     const svg = d3.select(box).append('svg').attr('viewBox', `${-W / 2} ${VY} ${W} ${H}`).style('touch-action', 'none').style('cursor', 'grab')
       .attr('role', 'img').attr('aria-label', 'Brein: ' + topics.map((t) => `${t.label} ${t.value}`).join(', '));
-    const defs = svg.append('defs');
-    const gr = defs.append('radialGradient').attr('id', 'glow');
-    gr.append('stop').attr('offset', '0%').attr('stop-color', 'var(--accent)').attr('stop-opacity', .25);
-    gr.append('stop').attr('offset', '100%').attr('stop-color', 'var(--accent)').attr('stop-opacity', 0);
-    svg.append('ellipse').attr('rx', R * 1.9).attr('ry', R * 1.45).attr('fill', 'url(#glow)');
-    const gNeu = svg.append('g'), gLinks = svg.append('g'), gNodes = svg.append('g');
-    const nLineEls = nLinks.map(() => gNeu.append('line').attr('stroke', 'var(--accent)').attr('stroke-width', 0.7));
-    const nDotEls = neurons.map(() => gNeu.append('circle').attr('r', 1.6).attr('fill', 'var(--accent)'));
-    const linkEls = links.map((l) => gLinks.append('line').attr('stroke', l.color).attr('stroke-width', l.main ? 2.4 : 1.4).attr('stroke-dasharray', l.main ? null : '3 4'));
+    const gLinks = svg.append('g'), gNodes = svg.append('g');
+    const linkEls = links.map((l) => gLinks.append('line').attr('stroke', l.color).attr('stroke-width', l.main ? 1.8 : 1.1).attr('stroke-dasharray', l.main ? null : '2 4'));
+    const cv = document.createElement('canvas'); cv.className = 'cloud'; box.insertBefore(cv, svg.node());
+    const ctx = cv.getContext('2d');
+    const DPR = Math.min(2, window.devicePixelRatio || 1);
+    const cw = svg.node().getBoundingClientRect().width || W, K = cw / W;
+    cv.width = Math.round(cw * DPR); cv.height = Math.round(cw * H / W * DPR); cv.style.width = cw + 'px'; cv.style.height = (cw * H / W) + 'px';
+    const sprite = document.createElement('canvas'); sprite.width = sprite.height = 32;
+    { const sg = sprite.getContext('2d'), gg = sg.createRadialGradient(16, 16, 0, 16, 16, 16);
+      gg.addColorStop(0, 'rgba(210,240,255,1)'); gg.addColorStop(0.25, 'rgba(124,200,255,.55)'); gg.addColorStop(1, 'rgba(124,200,255,0)');
+      sg.fillStyle = gg; sg.fillRect(0, 0, 32, 32); }
     const tt = tip(box);
     let hoverNode = null, mouse = null, dragging = false, down = null, running = false;
 
@@ -751,8 +763,9 @@
       const g = gNodes.append('g').datum(d).attr('class', 'node').attr('tabindex', 0).attr('role', 'button')
         .attr('aria-label', `${n.label}: ${n.value || ''}${d.kind === 'c' ? '' : '. Enter om in te zoomen, nog eens om te openen.'}`);
       if (n.st === 'warn' || n.st === 'bad') g.append('circle').attr('class', 'pulse').attr('r', r).attr('fill', 'none').attr('stroke', status(n.st)).attr('stroke-width', 2);
-      g.append('circle').attr('class', 'disc').attr('r', r).attr('fill', 'var(--panel)');
-      g.append('circle').attr('r', r).attr('fill', color).attr('opacity', .18);
+      g.append('circle').attr('r', r + 3).attr('fill', 'none').attr('stroke', color).attr('stroke-width', big ? 9 : 6).attr('opacity', .16);
+      g.append('circle').attr('class', 'disc').attr('r', r).attr('fill', 'rgba(4,10,20,.86)');
+      g.append('circle').attr('r', r).attr('fill', color).attr('opacity', .14);
       g.append('circle').attr('class', 'ring').attr('r', r).attr('fill', 'none').attr('stroke', n.st && n.st !== 'none' ? status(n.st) : color).attr('stroke-width', big ? 3 : 2);
       const sz = Math.round(r * 0.95);
       g.append('g').attr('transform', `translate(${-sz / 2},${-sz / 2})`).style('color', color)
@@ -775,12 +788,40 @@
     }
     const toView = (ev) => { const b = svg.node().getBoundingClientRect(); return [(ev.clientX - b.left) / b.width * W - W / 2, (ev.clientY - b.top) / b.height * H + VY]; };
 
+    // de wolk draait langzaam op zichzelf; de bollen blijven staan tot je ze versleept
+    function drawCloud(now) {
+      const yaw = S.yaw + S.px + (S.spin || 0), pitch = S.pitch + S.py;
+      ctx.setTransform(DPR * K, 0, 0, DPR * K, W / 2 * DPR * K, -VY * DPR * K);
+      ctx.clearRect(-W / 2, VY, W, H);
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < NP; i++) { const q = project(pts[i].p, yaw, pitch); PX[i] = q[0]; PY[i] = q[1]; PZ[i] = q[2]; }
+      ctx.fillStyle = 'rgba(80,165,255,.035)';
+      ctx.beginPath();
+      for (let k = 0; k < tris.length; k += 3) { const a = tris[k], b = tris[k + 1], c = tris[k + 2]; ctx.moveTo(PX[a], PY[a]); ctx.lineTo(PX[b], PY[b]); ctx.lineTo(PX[c], PY[c]); ctx.closePath(); }
+      ctx.fill();
+      const bins = [new Path2D(), new Path2D(), new Path2D()], T = RC * 0.3;
+      for (let k = 0; k < segs.length; k += 2) {
+        const a = segs[k], b = segs[k + 1], z = (PZ[a] + PZ[b]) / 2, P = bins[z > T ? 2 : z > -T ? 1 : 0];
+        P.moveTo(PX[a], PY[a]); P.lineTo(PX[b], PY[b]);
+      }
+      ctx.lineWidth = 0.6;
+      [.05, .12, .26].forEach((al, i) => { ctx.strokeStyle = `rgba(124,200,255,${al})`; ctx.stroke(bins[i]); });
+      const t = (now || performance.now()) / 1000;
+      for (let i = 0; i < NP; i++) {
+        const dp = Math.max(0, Math.min(1, (PZ[i] + RC) / (2 * RC)));
+        let al = 0.15 + 0.6 * dp, sz = 0.9 + 1.1 * dp;
+        if (mouse && !dragging) { const dm = Math.hypot(mouse[0] - PX[i], mouse[1] - PY[i]); if (dm < 90) { const k = 1 - dm / 90; al += 0.6 * k; sz += 1.4 * k; } }
+        ctx.fillStyle = `rgba(170,225,255,${Math.min(1, al).toFixed(3)})`;
+        ctx.fillRect(PX[i] - sz / 2, PY[i] - sz / 2, sz, sz);
+        if (pts[i].star) { const g = (6 + 8 * dp) * (0.7 + 0.3 * Math.sin(t * 1.6 + pts[i].tw)); ctx.globalAlpha = 0.35 + 0.5 * dp; ctx.drawImage(sprite, PX[i] - g, PY[i] - g, g * 2, g * 2); ctx.globalAlpha = 1; }
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
     function draw() {
       const yaw = S.yaw + S.px, pitch = S.pitch + S.py;
       const depth = (z) => Math.max(0, Math.min(1, (z + R * 1.9) / (R * 3.8)));
-      neurons.forEach((nn, i) => { const [x, y, z, s] = project(nn.p, yaw, pitch); nn.x = x; nn.y = y; nn.z = z;
-        nDotEls[i].attr('cx', x).attr('cy', y).attr('r', 1.3 * s).attr('opacity', .12 + .45 * depth(z)); });
-      nLinks.forEach(([a, b], i) => nLineEls[i].attr('x1', a.x).attr('y1', a.y).attr('x2', b.x).attr('y2', b.y).attr('opacity', .05 + .14 * depth((a.z + b.z) / 2)));
+      drawCloud();
       let hoverAnim = false;
       nodes.forEach((d) => {
         let [x, y, z, s] = project(d.p, yaw, pitch);
@@ -816,6 +857,7 @@
 
     function frame(now) {
       let moving = false;
+      const idle = !reduce && !document.hidden;
       if (S.tween) {
         const k = Math.min(1, (now - S.tween.t0) / S.tween.dur), e = 1 - Math.pow(1 - k, 3);
         S.yaw = S.tween.y0 + (S.tween.y1 - S.tween.y0) * e; S.pitch = S.tween.p0 + (S.tween.p1 - S.tween.p0) * e;
@@ -826,8 +868,9 @@
       // kantelen in de richting van je muis (parallax)
       const ex = S.tx - S.px, ey = S.ty - S.py;
       if (Math.abs(ex) > 1e-4 || Math.abs(ey) > 1e-4) { S.px += ex * 0.08; S.py += ey * 0.08; moving = true; }
-      if (draw()) moving = true;
-      if (moving || dragging) window.__brainAnim = requestAnimationFrame(frame);
+      if (idle) S.spin = ((S.spin || 0) + 0.0012) % (2 * Math.PI);
+      if (moving || dragging || hoverNode || mouse) { if (draw()) moving = true; } else if (idle) drawCloud(now);
+      if (moving || dragging || idle) window.__brainAnim = requestAnimationFrame(frame);
       else { window.__brainAnim = null; running = false; }
     }
     function kick() { if (!running) { running = true; window.__brainAnim = requestAnimationFrame(frame); } }
@@ -859,7 +902,7 @@
     }).on('pointerleave', () => { mouse = null; S.tx = 0; S.ty = 0; hoverNode = null; tt.hide(); kick(); });
 
     draw();
-    if (S.vy || S.vp || S.tween) kick();
+    kick();
     box.append(el('div', 'hint', narrow
       ? 'Sleep om te draaien. Tik een onderwerp om het naar voren te halen, tik nog eens om het te openen. Tik naast de bollen om terug te gaan. Tik Jarvis in het midden om met hem te praten.'
       : 'Sleep om het brein te draaien. Klik een onderwerp om het naar voren te halen, klik nog eens om het te openen. Klik naast de bollen om terug te gaan. Klik Jarvis in het midden om met hem te praten.'));
