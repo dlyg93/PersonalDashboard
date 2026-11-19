@@ -26,15 +26,15 @@ if not exist config.json (
 echo [2/3] config.json bestaat al.
 echo.
 
-echo [3/3] Taak "Claude Personal Dashboard" inplannen (elke 5 minuten)...
+echo [3/3] Taak "Claude Personal Dashboard" inplannen (elke minuut; volledige meting om de 5 minuten)...
 set "PYW="
 for /f "delims=" %%i in ('python -c "import sys,os;print(os.path.join(os.path.dirname(sys.executable),'pythonw.exe'))"') do set "PYW=%%i"
-schtasks /Create /F /SC MINUTE /MO 5 /TN "Claude Personal Dashboard" /TR "\"%PYW%\" \"%~dp0collector.py\""
+schtasks /Create /F /SC MINUTE /MO 1 /TN "Claude Personal Dashboard" /TR "\"%PYW%\" \"%~dp0collector.py\""
 echo.
 
 echo Eerste meting draaien...
-python collector.py
+python collector.py --now
 echo.
-echo Klaar. Het script draait nu elke 5 minuten op de achtergrond.
+echo Klaar. Het script draait nu op de achtergrond: elke minuut kijkt het naar opdrachten, om de 5 minuten haalt het nieuwe cijfers.
 echo Log: collector.log in deze map.
 pause

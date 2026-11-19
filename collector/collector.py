@@ -395,49 +395,105 @@ class McpStdioClient:
                 pass
 
 
-def collect_telenet(cfg):
-    out = {"status": "error", "message": None}
-    if not cfg.get("enabled", True):
-        out.update(status="off", message="uitgeschakeld in config.json")
-        return out
+def _telenet_command(cfg):
     if cfg.get("command"):
-        found = (cfg["command"], cfg.get("args", []), cfg.get("cwd"), cfg.get("env", {}), "config.json")
-    else:
-        found = find_telenet_server()
-    if not found:
-        out["message"] = "Telenet MCP-server niet gevonden. Vul 'telenet.command' en 'args' in config.json in."
-        return out
-    command, args, cwd, env, source = found
-    client = None
-    try:
-        client = McpStdioClient(command, args, cwd, env, timeout=cfg.get("timeout_seconds", 90))
-        client.request("initialize", {
+        return cfg["command"], cfg.get("args", []), cfg.get("cwd"), cfg.get("env", {}), "config.json"
+    return find_telenet_server()
+
+
+class TelenetSession:
+    """Start de Telenet MCP-server 1x en laat meerdere tools aanroepen."""
+
+    def __init__(self, cfg):
+        found = _telenet_command(cfg)
+        if not found:
+            raise RuntimeError("Telenet MCP-server niet gevonden. Vul 'telenet.command' en 'args' in config.json in.")
+        command, args, cwd, env, self.source = found
+        self.client = McpStdioClient(command, args, cwd, env, timeout=cfg.get("timeout_seconds", 90))
+        self.client.request("initialize", {
             "protocolVersion": "2024-11-05",
             "capabilities": {},
             "clientInfo": {"name": "claude-personal-dashboard", "version": str(VERSION)},
         })
-        client.notify("notifications/initialized")
-        res = client.request("tools/call", {"name": cfg.get("tool", "telenet_quota"), "arguments": {}})
+        self.client.notify("notifications/initialized")
+
+    def call(self, tool, arguments=None):
+        res = self.client.request("tools/call", {"name": tool, "arguments": arguments or {}})
+        text = " ".join(c.get("text", "") for c in res.get("content", []) if c.get("type") == "text")
         if res.get("isError"):
-            raise RuntimeError(" ".join(c.get("text", "") for c in res.get("content", [])))
+            raise RuntimeError(text or f"{tool} gaf een fout")
         data = res.get("structuredContent")
-        if not data:
-            text = next((c.get("text") for c in res.get("content", []) if c.get("type") == "text"), "{}")
-            data = json.loads(text)
+        if data is None:
+            try:
+                data = json.loads(text) if text else {}
+            except ValueError:
+                data = {"text": text}
+        return data
+
+    def close(self):
+        self.client.close()
+
+
+def _episode_row(e):
+    return {
+        "eventId": e.get("eventId"),
+        "title": e.get("titel"),
+        "season": e.get("seizoen"),
+        "episode": e.get("aflevering"),
+        "start": e.get("start"),
+        "hours": r2(e.get("uurOngeveer", e.get("uur"))),
+        "watched": e.get("bekeken"),
+        "status": e.get("status"),
+        "expires": e.get("verlooptOp"),
+    }
+
+
+def collect_telenet(cfg):
+    """Opnameruimte + volledige bibliotheek (reeksen met hun afleveringen)."""
+    out = {"status": "error", "message": None}
+    if not cfg.get("enabled", True):
+        out.update(status="off", message="uitgeschakeld in config.json")
+        return out
+    sess = None
+    try:
+        sess = TelenetSession(cfg)
+        rec = sess.call("telenet_list_recordings", {"limiet": 200, "sorteer": "ruimte"})
+        q = rec.get("quota") or sess.call(cfg.get("tool", "telenet_quota"))
         out.update({
             "status": "ok",
-            "used_hours": r2(data.get("gebruiktUur")),
-            "total_hours": r2(data.get("totaalUur")),
-            "free_hours": r2(data.get("vrijUur")),
-            "used_pct": r2(data.get("procentGebruikt")),
+            "used_hours": r2(q.get("gebruiktUur")),
+            "total_hours": r2(q.get("totaalUur")),
+            "free_hours": r2(q.get("vrijUur")),
+            "used_pct": r2(q.get("procentGebruikt")),
         })
+        library, problems = [], 0
+        for o in rec.get("opnames", []):
+            item = {
+                "id": o.get("id"), "type": o.get("type"), "title": o.get("titel"),
+                "channel": o.get("zender"), "hours": r2(o.get("uur")), "count": o.get("afleveringen"),
+                "watched": o.get("bekeken"), "start": o.get("start"), "expires": o.get("verlooptOp"),
+                "episodes": [],
+            }
+            if o.get("eventId"):  # losse opname (film, special, 1 aflevering)
+                item["episodes"] = [_episode_row(dict(o, uurOngeveer=o.get("uur")))]
+            elif o.get("showId") and cfg.get("library", True):
+                try:
+                    eps = sess.call("telenet_list_episodes", {"showId": o["showId"], "zender": o.get("zender")})
+                    item["episodes"] = [_episode_row(e) for e in eps.get("afleveringen", [])]
+                except Exception as e:
+                    problems += 1
+                    item["error"] = str(e)[:200]
+            library.append(item)
+        out["library"] = library
+        if problems:
+            out["message"] = f"{problems} reeks(en) konden niet volledig gelezen worden"
         return out
     except Exception as e:
-        out["message"] = f"{e} (server uit {source})"
+        out["message"] = f"{e}"
         return out
     finally:
-        if client:
-            client.close()
+        if sess:
+            sess.close()
 
 
 # --------------------------------------------------------------------------
@@ -540,19 +596,24 @@ def collect_strava_cached(cfg):
 TELENET_CACHE = os.path.join(HERE, ".telenet_cache.json")
 
 
-def collect_telenet_cached(cfg):
-    """Telenet verandert traag: standaard maar 1x per 30 min echt opvragen."""
-    every = cfg.get("every_minutes", 30)
+def load_telenet_cache():
     try:
         with open(TELENET_CACHE, "r", encoding="utf-8") as f:
-            cached = json.load(f)
-        age_min = (time.time() - cached["_fetched"]) / 60
-        if cached.get("status") == "ok" and age_min < every:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def collect_telenet_cached(cfg, force=False):
+    """Telenet verandert traag: standaard maar 1x per 30 min echt opvragen."""
+    every = cfg.get("every_minutes", 30)
+    cached = load_telenet_cache()
+    if cached and not force and cached.get("status") == "ok" and "library" in cached:
+        age_min = (time.time() - cached.get("_fetched", 0)) / 60
+        if age_min < every:
             log(f"Telenet: hergebruik meting van {age_min:.0f} min geleden")
             return {k: v for k, v in cached.items() if k != "_fetched"}
-    except (OSError, ValueError, KeyError):
-        pass
-    log("Telenet: opnameruimte ophalen...")
+    log("Telenet: opnameruimte en bibliotheek ophalen...")
     out = collect_telenet(cfg)
     out["measured_at"] = iso(now_local())
     if out["status"] == "ok":
@@ -562,6 +623,138 @@ def collect_telenet_cached(cfg):
         except OSError:
             pass
     return out
+
+
+# --------------------------------------------------------------------------
+# Opdrachten vanuit het dashboard
+# --------------------------------------------------------------------------
+# Het dashboard zet een bestand cmd-*.json in de map "Dashboard-opdrachten" in je Drive.
+# Dit script voert ENKEL de acties uit die hieronder toegestaan zijn, enkel voor opnames
+# die echt in je bibliotheek staan, en enkel als de opdracht minder dan 15 minuten oud is.
+
+ACTIONS_LOG = os.path.join(HERE, ".actions_log.json")
+ALLOWED_ACTIONS = {"telenet_delete"}
+MAX_COMMAND_AGE_MIN = 15
+
+
+def commands_dir(config):
+    return config.get("commands_dir") or os.path.join(os.path.dirname(HERE), "Dashboard-opdrachten")
+
+
+def load_actions_log():
+    try:
+        with open(ACTIONS_LOG, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return []
+
+
+def save_action(entry):
+    log_list = load_actions_log()
+    log_list.insert(0, entry)
+    try:
+        with open(ACTIONS_LOG, "w", encoding="utf-8") as f:
+            json.dump(log_list[:30], f)
+    except OSError:
+        pass
+
+
+class Rejected(ValueError):
+    """Opdracht geweigerd door de veiligheidscontroles (er werd niets uitgevoerd)."""
+
+
+def _parse_time(value):
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def process_commands(config):
+    """Voert opdrachten uit. Geeft True terug als er iets uitgevoerd werd."""
+    folder = commands_dir(config)
+    if not os.path.isdir(folder):
+        return False
+    files = sorted(f for f in os.listdir(folder) if f.startswith("cmd-") and f.endswith(".json"))
+    if not files:
+        return False
+    tcfg = config.get("telenet", {})
+    did_something = False
+    for fn in files:
+        path = os.path.join(folder, fn)
+        entry = {"id": fn[:-5], "action": None, "status": "rejected", "message": None,
+                 "titles": [], "hours": None, "count": 0, "done_at": None}
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                cmd = json.load(f)
+            entry["id"] = str(cmd.get("id") or entry["id"])
+            entry["action"] = action = cmd.get("action")
+            created = _parse_time(cmd.get("created_at"))
+            if action not in ALLOWED_ACTIONS:
+                raise Rejected(f"actie '{action}' is niet toegestaan")
+            if not cmd.get("confirmed"):
+                raise Rejected("opdracht was niet bevestigd")
+            if not created or (datetime.now(timezone.utc) - created).total_seconds() > MAX_COMMAND_AGE_MIN * 60:
+                raise Rejected(f"opdracht is ouder dan {MAX_COMMAND_AGE_MIN} minuten en werd niet uitgevoerd")
+
+            if action == "telenet_delete":
+                ids = [str(i) for i in (cmd.get("eventIds") or [])]
+                if not ids or len(ids) > 100:
+                    raise Rejected("geen of te veel opnames in de opdracht (max 100)")
+                lib = (load_telenet_cache() or {}).get("library")
+                if lib is None:
+                    lib = collect_telenet_cached(tcfg, force=True).get("library") or []
+                known = {}
+                for item in lib:
+                    for e in item.get("episodes", []):
+                        if e.get("eventId") and e.get("status") != "planned":
+                            known[e["eventId"]] = (item.get("title"), e)
+                unknown = [i for i in ids if i not in known]
+                if unknown:
+                    raise Rejected(f"{len(unknown)} opname(s) staan niet (meer) in je bibliotheek")
+                entry["count"] = len(ids)
+                entry["hours"] = r2(sum((known[i][1].get("hours") or 0) for i in ids))
+                titles = []
+                for i in ids:
+                    show, e = known[i]
+                    t = show if not e.get("episode") else f"{show} S{e.get('season')}E{e.get('episode')}"
+                    if t not in titles:
+                        titles.append(t)
+                entry["titles"] = titles[:30]
+                log(f"Opdracht {entry['id']}: {len(ids)} opname(s) verwijderen ({entry['hours']} u)")
+                sess = TelenetSession(tcfg)
+                try:
+                    res = sess.call("telenet_delete_recordings", {"eventIds": ids, "bevestigd": True})
+                finally:
+                    sess.close()
+                entry["status"] = "ok"
+                msg = res.get("text") if isinstance(res, dict) else None
+                entry["message"] = (msg or json.dumps(res, ensure_ascii=False))[:300]
+                try:
+                    os.remove(TELENET_CACHE)  # bij de volgende meting alles opnieuw ophalen
+                except OSError:
+                    pass
+                did_something = True
+        except Rejected as e:
+            entry["status"] = "rejected"
+            entry["message"] = str(e)[:300]
+        except Exception as e:
+            entry["status"] = "error"
+            entry["message"] = str(e)[:300]
+        if entry["status"] != "ok":
+            log(f"Opdracht {entry['id']}: {entry['status']} - {entry['message']}")
+        entry["done_at"] = iso(now_local())
+        save_action(entry)
+        try:
+            os.remove(path)
+        except OSError:
+            try:
+                os.replace(path, path + ".done")
+            except OSError:
+                pass
+        did_something = True
+    return did_something
 
 
 # --------------------------------------------------------------------------
@@ -589,6 +782,7 @@ def collect(config):
         "interval_minutes": config.get("interval_minutes", 5),
         "accounts": accounts,
         "telenet": telenet,
+        "actions": load_actions_log()[:10],
     }
 
 
@@ -614,6 +808,30 @@ def write_output(data, config):
     return path
 
 
+STATE_PATH = os.path.join(HERE, ".collector_state.json")
+LOCK_PATH = os.path.join(HERE, ".collector.lock")
+
+
+def acquire_lock():
+    """Voorkomt dat twee runs tegelijk lopen (de taak start elke minuut)."""
+    try:
+        if os.path.exists(LOCK_PATH) and time.time() - os.path.getmtime(LOCK_PATH) > 600:
+            os.remove(LOCK_PATH)  # achtergebleven van een vastgelopen run
+        fd = os.open(LOCK_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, str(os.getpid()).encode())
+        os.close(fd)
+        return True
+    except OSError:
+        return False
+
+
+def release_lock():
+    try:
+        os.remove(LOCK_PATH)
+    except OSError:
+        pass
+
+
 def main():
     args = sys.argv[1:]
     if "--find-telenet" in args:
@@ -627,22 +845,53 @@ def main():
         return
 
     config = load_config()
-    data = collect(config)
-    for acc in data["accounts"]:
-        if acc["status"] == "ok":
-            log(f"  {acc['name']}: equity {acc['equity']} {acc['currency']}, vandaag {acc['day_pl']}, {acc['open_positions']} open")
-        else:
-            log(f"  {acc['name']}: FOUT - {acc['message']}")
-    t = data["telenet"]
-    log(f"  Telenet: {t.get('used_pct')}% gebruikt" if t["status"] == "ok" else f"  Telenet: {t['status']} - {t.get('message')}")
-    s = data["strava"]
-    log(f"  Strava: {len(s['activities'])} activiteiten" if s["status"] == "ok" else f"  Strava: {s['status']} - {s.get('message')}")
-
-    if "--test" in args:
-        print(json.dumps(data, ensure_ascii=False, indent=2))
+    if not acquire_lock():
         return
-    path = write_output(data, config)
-    log(f"Geschreven: {path} ({data['duration_s']} s)")
+    try:
+        executed = False
+        if "--test" not in args:
+            executed = process_commands(config)
+
+        # De taak draait elke minuut (voor snelle opdrachten); een volledige meting
+        # gebeurt enkel om de interval_minutes, of meteen na een uitgevoerde opdracht.
+        try:
+            with open(STATE_PATH, "r", encoding="utf-8") as f:
+                state = json.load(f)
+        except (OSError, ValueError):
+            state = {}
+        interval = config.get("interval_minutes", 5)
+        due = time.time() - state.get("last_full", 0) >= interval * 60 - 20
+        if not (due or executed or "--test" in args or "--now" in args):
+            return
+
+        data = collect(config)
+        for acc in data["accounts"]:
+            if acc["status"] == "ok":
+                log(f"  {acc['name']}: equity {acc['equity']} {acc['currency']}, vandaag {acc['day_pl']}, {acc['open_positions']} open")
+            else:
+                log(f"  {acc['name']}: FOUT - {acc['message']}")
+        t = data["telenet"]
+        if t["status"] == "ok":
+            n = sum(len(i.get("episodes", [])) for i in t.get("library", []))
+            log(f"  Telenet: {t.get('used_pct')}% gebruikt, {len(t.get('library', []))} titels / {n} opnames")
+        else:
+            log(f"  Telenet: {t['status']} - {t.get('message')}")
+        s = data["strava"]
+        log(f"  Strava: {len(s['activities'])} activiteiten" if s["status"] == "ok" else f"  Strava: {s['status']} - {s.get('message')}")
+
+        if "--test" in args:
+            print(json.dumps(data, ensure_ascii=False, indent=2))
+            return
+        path = write_output(data, config)
+        state["last_full"] = time.time()
+        try:
+            with open(STATE_PATH, "w", encoding="utf-8") as f:
+                json.dump(state, f)
+        except OSError:
+            pass
+        log(f"Geschreven: {path} ({data['duration_s']} s)")
+    finally:
+        release_lock()
 
 
 if __name__ == "__main__":
