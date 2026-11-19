@@ -479,6 +479,7 @@
     if (parts.length) lede.append('.');
 
     if (view === 'brein') renderBrain(accounts, t, lib, strava, acts, wk);
+    else if (window.__brainAnim) { cancelAnimationFrame(window.__brainAnim); window.__brainAnim = null; }
     if (view === 'forex') { renderAccounts(accounts); renderPositions(accounts); renderTrades(accounts); }
     if (view === 'telenet') renderTelenetView(t, lib, d.actions || []);
     if (view === 'sport') renderStrava(strava, acts, wk);
@@ -538,74 +539,124 @@
         ].filter(Boolean) : []}
     ];
 
-    // posities berekenen (abstracte coördinaten), daarna het geheel inpassen
-    const nodes = [], links = [];
+    // ---- opbouw: knopen en verbindingen; posities worden per beeldje berekend ----
+    if (window.__brainAnim) cancelAnimationFrame(window.__brainAnim);
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const short = (txt, n) => (txt && txt.length > n ? txt.slice(0, n - 1) + '…' : txt);
-    if (!narrow) {
-      const R = 175, R2 = 125, spread = 50;
-      const pos = (a, r, ox = 0, oy = 0) => [ox + r * Math.cos(a * Math.PI / 180), oy + r * Math.sin(a * Math.PI / 180)];
-      nodes.push({x: 0, y: 0, r: 42, big: true, color: 'var(--accent)', n: {icon: 'me', label: 'Laurenz', value: '', st: 'none', tip: ['Alles op een rij', 'Klik op een onderwerp']}});
-      topics.forEach((t) => {
-        const [tx, ty] = pos(t.angle, R);
-        links.push({x1: 0, y1: 0, x2: tx, y2: ty, color: t.color, main: true});
-        t.kids.forEach((k, i) => {
-          const a = t.angle + (i - (t.kids.length - 1) / 2) * spread;
-          const [kx, ky] = pos(a, R2, tx, ty);
-          links.push({x1: tx, y1: ty, x2: kx, y2: ky, color: t.color});
-          nodes.push({x: kx, y: ky, r: 24, color: t.color, n: {...k, label: short(k.label, 16), go: k.go || t.key}});
-        });
-        nodes.push({x: tx, y: ty, r: 38, big: true, color: t.color, n: {icon: t.icon, label: t.label, value: t.value, st: t.st, tip: t.tip, go: t.key}});
+    const nodes = [], links = [];
+    const center = {kind: 'c', r: narrow ? 34 : 42, big: true, color: 'var(--accent)',
+      n: {icon: 'me', label: 'Laurenz', value: '', st: 'none', tip: ['Alles op een rij', 'Klik op een onderwerp']}};
+    nodes.push(center);
+    topics.forEach((t, ti) => {
+      const tn = {kind: 't', ti, r: narrow ? 30 : 38, big: true, color: t.color,
+        n: {icon: t.icon, label: t.label, value: t.value, st: t.st, tip: t.tip, go: t.key}};
+      links.push({a: center, b: tn, color: t.color, main: true});
+      t.kids.slice(0, narrow ? 3 : 4).forEach((k, ki, arr) => {
+        const kn = {kind: 'k', ti, ki, nk: arr.length, parent: tn, r: narrow ? 21 : 24, color: t.color,
+          n: {...k, label: short(k.label, narrow ? 11 : 16), go: k.go || t.key}};
+        links.push({a: tn, b: kn, color: t.color});
+        nodes.push(kn);
       });
-    } else {
-      // gsm: boomvorm van boven naar onder
-      const rowH = 150, x0 = 46, kidX = [140, 225, 310];
-      nodes.push({x: x0, y: 0, r: 34, big: true, color: 'var(--accent)', n: {icon: 'me', label: 'Laurenz', value: '', st: 'none', tip: ['Alles op een rij']}});
-      topics.forEach((t, ti) => {
-        const ty = 120 + ti * rowH;
-        links.push({x1: x0, y1: ti ? 120 + (ti - 1) * rowH : 0, x2: x0, y2: ty, color: t.color, main: true});
-        t.kids.slice(0, 3).forEach((k, i) => {
-          links.push({x1: x0, y1: ty, x2: kidX[i], y2: ty, color: t.color});
-          nodes.push({x: kidX[i], y: ty, r: 21, color: t.color, n: {...k, label: short(k.label, 11), go: k.go || t.key}});
-        });
-        nodes.push({x: x0, y: ty, r: 30, big: true, color: t.color, n: {icon: t.icon, label: t.label, value: t.value, st: t.st, tip: t.tip, go: t.key}});
-      });
-    }
-    const pad = 12;
-    const x0 = d3.min(nodes, (d) => d.x - Math.max(d.r, 56)) - pad, x1 = d3.max(nodes, (d) => d.x + Math.max(d.r, 56)) + pad;
-    const y0 = d3.min(nodes, (d) => d.y - d.r) - pad - 8, y1 = d3.max(nodes, (d) => d.y + d.r + 36) + pad + 18;
-    const vw = x1 - x0, vh = y1 - y0;
-    const svg = d3.select(box).append('svg').attr('viewBox', `${x0} ${y0} ${vw} ${vh}`)
-      .style('max-height', narrow ? 'none' : '600px')
-      .attr('role', 'img').attr('aria-label', 'Brein: ' + topics.map((t) => `${t.label} ${t.value}`).join(', '));
-    const gLinks = svg.append('g'), gNodes = svg.append('g');
-    const tt = tip(box);
-    const scale = () => box.clientWidth / vw;   // voor de tooltip-positie
-
-    links.forEach((l) => {
-      const p = l.curve ? `M${l.x1},${l.y1} C${l.x1},${(l.y1 + l.y2) / 2} ${l.x2},${l.y1 + 20} ${l.x2},${l.y2}`
-        : l.main ? `M${l.x1},${l.y1} L${l.x2},${l.y2}`
-        : `M${l.x1},${l.y1} Q${(l.x1 + l.x2) / 2 + (l.y2 - l.y1) * 0.12},${(l.y1 + l.y2) / 2 - (l.x2 - l.x1) * 0.12} ${l.x2},${l.y2}`;
-      gLinks.append('path').attr('d', p).attr('fill', 'none').attr('stroke', l.color)
-        .attr('stroke-opacity', l.main ? .45 : .3).attr('stroke-width', l.main ? 2.5 : 1.5).attr('stroke-dasharray', l.main ? null : '3 4');
+      nodes.push(tn);
     });
 
-    nodes.forEach(({x, y, r, big, color, n}) => {
-      const g = gNodes.append('g').attr('class', 'node').attr('transform', `translate(${x},${y})`)
-        .attr('tabindex', 0).attr('role', 'button').attr('aria-label', `${n.label}: ${n.value || ''}`);
+    // posities op tijdstip s (seconden)
+    const R = 175, R2 = 125, spread = 50, SPEED = 360 / 160;   // één rondje per 160 s
+    const rowH = 150, X0 = 46, KX = [140, 225, 310];
+    const rad = (d) => d * Math.PI / 180;
+    function place(s) {
+      nodes.forEach((d) => {
+        const ph = (d.ti || 0) * 1.7 + (d.ki || 0) * 0.9;
+        if (narrow) {
+          const fy = reduce ? 0 : Math.sin(s * 0.9 + ph) * 3, fx = reduce ? 0 : Math.cos(s * 0.7 + ph) * 2;
+          if (d.kind === 'c') { d.x = X0; d.y = 0; }
+          else if (d.kind === 't') { d.x = X0 + fx * 0.5; d.y = 120 + d.ti * rowH + fy * 0.5; }
+          else { d.x = KX[d.ki] + fx; d.y = 120 + d.ti * rowH + fy; }
+          return;
+        }
+        const rot = reduce ? 0 : s * SPEED;
+        if (d.kind === 'c') { d.x = 0; d.y = reduce ? 0 : Math.sin(s * 0.8) * 2; return; }
+        const ta = [-90, 30, 150][d.ti] + rot;
+        const breathe = reduce ? 0 : Math.sin(s * 0.6 + d.ti) * 6;
+        if (d.kind === 't') { d.x = (R + breathe) * Math.cos(rad(ta)); d.y = (R + breathe) * Math.sin(rad(ta)); return; }
+        const p = d.parent;
+        const wob = reduce ? 0 : Math.sin(s * 1.1 + ph) * 5;
+        const ka = ta + (d.ki - (d.nk - 1) / 2) * spread + wob;
+        d.x = p.x + R2 * Math.cos(rad(ka)); d.y = p.y + R2 * Math.sin(rad(ka));
+      });
+    }
+
+    // vast kader, groot genoeg voor een volledige omwenteling
+    let vx, vy, vw, vh;
+    if (narrow) { vx = -24; vy = -50; vw = 400; vh = 120 + 2 * rowH + 135; }
+    else { const E = R + 8 + R2 + 24 + 50; vx = -E; vy = -E + 10; vw = 2 * E; vh = 2 * E - 10; }
+    const svg = d3.select(box).append('svg').attr('viewBox', `${vx} ${vy} ${vw} ${vh}`)
+      .style('max-height', narrow ? 'none' : '640px')
+      .attr('role', 'img').attr('aria-label', 'Brein: ' + topics.map((t) => `${t.label} ${t.value}`).join(', '));
+    // zachte gloed achter het centrum
+    const defs = svg.append('defs');
+    const gr = defs.append('radialGradient').attr('id', 'glow');
+    gr.append('stop').attr('offset', '0%').attr('stop-color', 'var(--accent)').attr('stop-opacity', .22);
+    gr.append('stop').attr('offset', '100%').attr('stop-color', 'var(--accent)').attr('stop-opacity', 0);
+    if (!narrow) svg.append('circle').attr('r', R + 40).attr('fill', 'url(#glow)');
+    if (!narrow) svg.append('circle').attr('r', R).attr('fill', 'none').attr('stroke', 'var(--line)').attr('stroke-dasharray', '2 6');
+    const gLinks = svg.append('g'), gNodes = svg.append('g');
+    const tt = tip(box);
+    let paused = false, hoverNode = null;
+
+    const linkEls = links.map((l) => gLinks.append('path').attr('fill', 'none').attr('stroke', l.color)
+      .attr('stroke-opacity', l.main ? .45 : .3).attr('stroke-width', l.main ? 2.5 : 1.5).attr('stroke-dasharray', l.main ? null : '3 4'));
+    // lichtpuntjes die over de hoofdlijnen reizen
+    const sparks = reduce ? [] : links.filter((l) => l.main).map((l) => gLinks.append('circle').attr('r', 3).attr('fill', l.color).attr('opacity', .9));
+
+    nodes.forEach((d) => {
+      const {r, big, color, n} = d;
+      const g = gNodes.append('g').attr('class', 'node').attr('tabindex', 0).attr('role', 'button').attr('aria-label', `${n.label}: ${n.value || ''}`);
       if (n.st === 'warn' || n.st === 'bad') g.append('circle').attr('class', 'pulse').attr('r', r).attr('fill', 'none').attr('stroke', status(n.st)).attr('stroke-width', 2);
       g.append('circle').attr('class', 'disc').attr('r', r).attr('fill', 'var(--panel)');
       g.append('circle').attr('r', r).attr('fill', color).attr('opacity', .16);
       g.append('circle').attr('class', 'ring').attr('r', r).attr('fill', 'none').attr('stroke', n.st && n.st !== 'none' ? status(n.st) : color).attr('stroke-width', big ? 3 : 2);
-      const s = Math.round(r * 0.95);
-      g.append('g').attr('transform', `translate(${-s / 2},${-s / 2})`).style('color', color)
-        .html(`<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="${big ? 1.8 : 2}" stroke-linecap="round" stroke-linejoin="round">${ICONS[n.icon]}</svg>`);
+      const sz = Math.round(r * 0.95);
+      g.append('g').attr('transform', `translate(${-sz / 2},${-sz / 2})`).style('color', color)
+        .html(`<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="${big ? 1.8 : 2}" stroke-linecap="round" stroke-linejoin="round">${ICONS[n.icon]}</svg>`);
       g.append('text').attr('class', 'lbl').attr('text-anchor', 'middle').attr('y', r + 16).style('font-size', big ? '14px' : '12.5px').text(n.label);
       if (n.value) g.append('text').attr('class', 'val').attr('text-anchor', 'middle').attr('y', r + 31).text(n.value);
       const go = () => { if (n.f) { filter = n.f; syncChips(); } if (n.go) location.hash = n.go; };
       g.on('click', go).on('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(); } });
-      if (n.tip) g.on('pointerenter', () => { const k = scale(); tt.show(n.tip, (x - x0) * k, (y - y0 - r) * k); }).on('pointerleave', () => tt.hide());
+      const showTip = () => { const k = box.clientWidth / vw; if (n.tip) tt.show(n.tip, (d.x - vx) * k, (d.y - vy - r) * k); };
+      g.on('pointerenter focus', () => { hoverNode = d; paused = true; showTip(); })
+       .on('pointerleave blur', () => { hoverNode = null; paused = false; tt.hide(); });
+      d.g = g;
     });
-    box.append(el('div', 'hint', 'Klik op een bol om in te zoomen. Een knipperende rand vraagt aandacht.'));
+
+    function draw(s) {
+      place(s);
+      nodes.forEach((d) => d.g.attr('transform', `translate(${d.x.toFixed(1)},${d.y.toFixed(1)})`));
+      links.forEach((l, i) => {
+        const {a, b} = l;
+        const p = l.main || narrow ? `M${a.x},${a.y} L${b.x},${b.y}`
+          : `M${a.x},${a.y} Q${(a.x + b.x) / 2 + (b.y - a.y) * 0.12},${(a.y + b.y) / 2 - (b.x - a.x) * 0.12} ${b.x},${b.y}`;
+        linkEls[i].attr('d', p);
+      });
+      sparks.forEach((c, i) => {
+        const l = links.filter((x) => x.main)[i];
+        const f = ((s * 0.35 + i / 3) % 1);
+        c.attr('cx', l.a.x + (l.b.x - l.a.x) * f).attr('cy', l.a.y + (l.b.y - l.a.y) * f).attr('opacity', Math.sin(f * Math.PI) * .9);
+      });
+    }
+    // de klok loopt door, maar staat stil zolang je over een bol hangt
+    let s = (window.__brainClock || 0), last = performance.now();
+    draw(s);
+    if (!reduce) {
+      const tick = (now) => {
+        const dt = Math.min(0.1, (now - last) / 1000); last = now;
+        if (!paused && !document.hidden) { s += dt; window.__brainClock = s; draw(s); }
+        else if (hoverNode && !document.hidden) { /* stil */ }
+        window.__brainAnim = requestAnimationFrame(tick);
+      };
+      window.__brainAnim = requestAnimationFrame(tick);
+    }
+    box.append(el('div', 'hint', 'Klik op een bol om in te zoomen. Hang erover om het brein even stil te zetten. Een knipperende rand vraagt aandacht.'));
   }
 
   // ---------- FOREX ----------
