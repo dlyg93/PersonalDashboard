@@ -14,27 +14,35 @@
 <link rel="manifest" href="manifest.webmanifest">
 <style>
   :root {
-    --bg: #0f1115; --panel: #171a21; --line: #262b36; --fg: #e8eaf0; --muted: #8b93a7;
+    --bg: #0f1115; --panel: #171a21; --panel2: #1d212b; --line: #262b36; --fg: #e8eaf0; --muted: #8b93a7;
     --accent: #3b82f6; --good: #22c55e; --bad: #ef4444; --warn: #f59e0b; --bar-bg: #232835; --bar-muted: #3a4152;
+    --c-forex: #eab308; --c-telenet: #a78bfa; --c-sport: #fb6a2c;
     --radius: 12px;
   }
   @media (prefers-color-scheme: light) {
-    :root { --bg: #f5f6f8; --panel: #ffffff; --line: #e3e6ec; --fg: #161a22; --muted: #667085; --bar-bg: #eceef2; --bar-muted: #c9ced8; }
+    :root { --bg: #f5f6f8; --panel: #ffffff; --panel2: #f3f4f7; --line: #e3e6ec; --fg: #161a22; --muted: #667085; --bar-bg: #eceef2; --bar-muted: #c9ced8;
+      --c-forex: #ca8a04; --c-telenet: #7c3aed; --c-sport: #ea580c; }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 16px 16px 96px; }
   header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
-  h1 { font-size: 24px; font-weight: 600; margin: 0; }
-  h2 { font-size: 17px; font-weight: 600; margin: 32px 0 4px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0; }
+  h2 { font-size: 17px; font-weight: 600; margin: 28px 0 4px; }
+  h3 { font-size: 15px; font-weight: 600; margin: 0; }
   .muted { color: var(--muted); }
   .small { font-size: 13px; }
   .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
   .lede { margin: 10px 0 0; }
-  .btn { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+  button { font: inherit; }
+  .btn { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; cursor: pointer; }
+  .btn:disabled { opacity: .5; cursor: default; }
   .btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 500; padding: 6px 12px; }
+  .btn.danger { background: var(--bad); }
+  .btn.small { padding: 5px 10px; font-size: 13px; }
   .alert { margin-top: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--warn); font-size: 14px; }
   .alert.err { border-color: var(--bad); }
+  .alert.ok { border-color: var(--good); }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; }
   .card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
@@ -43,9 +51,10 @@
   dl.kv { display: grid; grid-template-columns: 1fr auto; gap: 3px 14px; font-size: 13px; font-variant-numeric: tabular-nums; margin: 10px 0 0; }
   dl.kv dt { color: var(--muted); margin: 0; }
   dl.kv dd { margin: 0; text-align: right; }
-  .good { color: var(--good); } .bad { color: var(--bad); }
-  .bar { height: 10px; border-radius: 5px; background: var(--bar-bg); overflow: hidden; margin: 10px 0; }
-  .bar > span { display: block; height: 100%; border-radius: 5px; background: var(--accent); }
+  .good { color: var(--good); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+  .bar { position: relative; height: 10px; border-radius: 5px; background: var(--bar-bg); overflow: hidden; margin: 10px 0; }
+  .bar > span { position: absolute; left: 0; top: 0; display: block; height: 100%; border-radius: 5px; background: var(--accent); }
+  .bar > span.preview { background: var(--good); opacity: .9; }
   .rule { margin-top: 10px; font-size: 13px; }
   .rule .bar { height: 6px; margin: 4px 0 0; }
   .spark, .chart { position: relative; }
@@ -64,6 +73,59 @@
   #login { text-align: center; padding: 70px 16px; }
   #login p { color: var(--muted); max-width: 420px; margin: 12px auto 22px; }
   .hidden { display: none !important; }
+
+  /* navigatie */
+  nav.tabs { display: flex; gap: 6px; margin: 14px 0 4px; overflow-x: auto; padding-bottom: 2px; }
+  nav.tabs a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); text-decoration: none; white-space: nowrap; font-size: 14px; }
+  nav.tabs a svg { width: 16px; height: 16px; }
+  nav.tabs a.on { background: var(--panel); color: var(--fg); border-color: var(--muted); }
+
+  /* brein */
+  .brain { position: relative; background: radial-gradient(circle at 50% 45%, var(--panel2), var(--bg) 70%); border: 1px solid var(--line); border-radius: var(--radius); }
+  .brain svg { display: block; width: 100%; }
+  .brain .node { cursor: pointer; }
+  .brain .node:focus { outline: none; }
+  .brain .node:focus-visible circle.ring { stroke-width: 4; }
+  .brain .node:hover circle.disc { filter: brightness(1.25); }
+  .brain text.lbl { fill: var(--fg); font-size: 13px; font-weight: 600; }
+  .brain text.val { fill: var(--muted); font-size: 12px; }
+  .brain .hint { padding: 0 12px 10px; font-size: 12px; color: var(--muted); }
+  @media (prefers-reduced-motion: no-preference) {
+    .brain .pulse { animation: pulse 2.2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+    @keyframes pulse { 0% { opacity: .55; transform: scale(1); } 100% { opacity: 0; transform: scale(1.55); } }
+  }
+
+  /* telenet-bibliotheek */
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+  .chip { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 999px; padding: 5px 12px; cursor: pointer; font-size: 13px; }
+  .chip.on { background: var(--c-telenet); border-color: var(--c-telenet); color: #fff; }
+  .lib { border-top: 1px solid var(--line); }
+  .lib-row { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; padding: 9px 2px; border-bottom: 1px solid var(--line); }
+  .lib-row.show { cursor: pointer; }
+  .lib-row.ep { padding-left: 26px; background: var(--panel2); font-size: 14px; }
+  .lib-row input { width: 18px; height: 18px; accent-color: var(--c-telenet); cursor: pointer; }
+  .lib-title { min-width: 0; }
+  .lib-title .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lib-row.ep .lib-title .t { font-weight: 500; }
+  .lib-title .m { color: var(--muted); font-size: 12px; }
+  .lib-right { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; white-space: nowrap; }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; margin-left: 4px; border: 1px solid currentColor; }
+  .badge.w { color: var(--good); } .badge.o { color: var(--warn); } .badge.p { color: var(--muted); }
+  .chev { display: inline-block; transition: transform .15s; color: var(--muted); margin-right: 4px; }
+  .open .chev { transform: rotate(90deg); }
+  .sugg { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 8px; }
+  .sugg .box { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--panel2); }
+  .sugg .box .big { font-size: 22px; }
+  .actionbar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -6px 20px rgba(0,0,0,.25); z-index: 20; }
+  .actionbar .in { max-width: 1100px; margin: 0 auto; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 30; padding: 16px; }
+  .modal .box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; max-width: 520px; width: 100%; padding: 20px; max-height: 85vh; overflow: auto; }
+  .modal ul { margin: 10px 0; padding-left: 18px; font-size: 14px; }
+  .modal .btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--muted); border-top-color: transparent; border-radius: 50%; vertical-align: -1px; margin-right: 6px; }
+  @media (prefers-reduced-motion: no-preference) { .spin { animation: sp 1s linear infinite; } @keyframes sp { to { transform: rotate(360deg); } } }
+  .hist { list-style: none; padding-left: 0 !important; }
+  .hist li { margin: 4px 0; }
 </style>
 <script src="config.js"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
@@ -87,58 +149,143 @@
   </section>
 
   <main id="app" class="hidden">
+    <nav class="tabs" id="tabs">
+      <a href="#brein" data-v="brein"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="5" r="2"/><circle cx="20" cy="5" r="2"/><circle cx="12" cy="21" r="2"/><path d="M10 10L5.5 6.5M14 10l4.5-3.5M12 15v4"/></svg>Brein</a>
+      <a href="#forex" data-v="forex" data-icon="forex">Forex</a>
+      <a href="#telenet" data-v="telenet" data-icon="tv">Telenet TV</a>
+      <a href="#sport" data-v="sport" data-icon="run">Sport</a>
+    </nav>
     <p class="lede" id="lede"></p>
     <div id="alert" class="alert hidden" role="status"></div>
 
-    <h2>Forex</h2>
-    <p class="sub">Uit MT5 op de Mac mini. Dag-P/L volgt de servertijd van de broker en telt open posities mee.</p>
-    <div class="grid" id="accounts"></div>
-    <div class="two">
-      <div class="card">
-        <div class="name">Open posities</div>
+    <!-- BREIN -->
+    <section data-view="brein">
+      <div class="brain" id="brain"></div>
+    </section>
+
+    <!-- FOREX -->
+    <section data-view="forex" class="hidden">
+      <h2>Forex</h2>
+      <p class="sub">Uit MT5 op de Mac mini. Dag-P/L volgt de servertijd van de broker en telt open posities mee.</p>
+      <div class="grid" id="accounts"></div>
+      <div class="two">
+        <div class="card">
+          <div class="name">Open posities</div>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Account</th><th>Symbool</th><th>Richting</th><th class="num">Lots</th><th class="num">Open</th><th class="num">P/L</th></tr></thead>
+            <tbody id="positions"></tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <div class="name">Laatste gesloten trades</div>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Gesloten</th><th>Account</th><th>Symbool</th><th>Positie</th><th class="num">Lots</th><th class="num">Resultaat</th></tr></thead>
+            <tbody id="trades"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TELENET -->
+    <section data-view="telenet" class="hidden">
+      <h2>Telenet TV</h2>
+      <div id="tvStatus"></div>
+      <div class="grid" style="margin-top:12px">
+        <div class="card" id="telenet"></div>
+        <div class="card">
+          <h3>Wat kan weg?</h3>
+          <div class="small muted">Afleveringen die je al bekeken hebt, en opnames van meer dan 6 maanden oud die je nog nooit bekeek.</div>
+          <div class="sugg" id="sugg"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="card-top"><h3>Bibliotheek</h3><span class="small muted" id="libCount"></span></div>
+        <div class="chips" id="chips">
+          <button class="chip on" data-f="voorstel" type="button">Voorstellen</button>
+          <button class="chip" data-f="bekeken" type="button">Bekeken</button>
+          <button class="chip" data-f="oud" type="button">6+ maanden, niet bekeken</button>
+          <button class="chip" data-f="alles" type="button">Alles</button>
+        </div>
+        <div class="lib" id="lib"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>Uitgevoerde acties</h3>
+        <ul class="hist small" id="hist" style="padding-left:18px;margin:8px 0 0"></ul>
+      </div>
+    </section>
+
+    <!-- SPORT -->
+    <section data-view="sport" class="hidden">
+      <h2>Sport</h2>
+      <div class="grid">
+        <div class="card" id="week"></div>
+        <div class="card">
+          <div class="name">Gelopen km per week</div>
+          <div class="small muted">Laatste 8 weken, week start op maandag</div>
+          <div class="chart" id="weeks"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="name">Laatste activiteiten</div>
         <div class="tablewrap"><table>
-          <thead><tr><th>Account</th><th>Symbool</th><th>Richting</th><th class="num">Lots</th><th class="num">Open</th><th class="num">P/L</th></tr></thead>
-          <tbody id="positions"></tbody>
+          <thead><tr><th>Datum</th><th>Activiteit</th><th>Sport</th><th class="num">Km</th><th class="num">Minuten</th><th>Tempo</th></tr></thead>
+          <tbody id="acts"></tbody>
         </table></div>
       </div>
-      <div class="card">
-        <div class="name">Laatste gesloten trades</div>
-        <div class="tablewrap"><table>
-          <thead><tr><th>Gesloten</th><th>Account</th><th>Symbool</th><th>Positie</th><th class="num">Lots</th><th class="num">Resultaat</th></tr></thead>
-          <tbody id="trades"></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <h2>Telenet TV</h2>
-    <div class="grid">
-      <div class="card" id="telenet"></div>
-    </div>
-
-    <h2>Strava</h2>
-    <div class="grid">
-      <div class="card" id="week"></div>
-      <div class="card">
-        <div class="name">Gelopen km per week</div>
-        <div class="small muted">Laatste 8 weken, week start op maandag</div>
-        <div class="chart" id="weeks"></div>
-      </div>
-    </div>
-    <div class="card" style="margin-top:14px">
-      <div class="name">Laatste activiteiten</div>
-      <div class="tablewrap"><table>
-        <thead><tr><th>Datum</th><th>Activiteit</th><th>Sport</th><th class="num">Km</th><th class="num">Minuten</th><th>Tempo</th></tr></thead>
-        <tbody id="acts"></tbody>
-      </table></div>
-    </div>
+    </section>
   </main>
+</div>
+
+<div class="actionbar hidden" id="actionbar">
+  <div class="in">
+    <div id="selInfo"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn ghost" id="selClear" type="button">Selectie wissen</button>
+      <button class="btn danger" id="selDelete" type="button">Verwijderen…</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="box">
+    <h3 id="mTitle">Opnames definitief verwijderen?</h3>
+    <div id="mBody" class="small"></div>
+    <div class="btns">
+      <button class="btn ghost" id="mCancel" type="button">Annuleren</button>
+      <button class="btn danger" id="mOk" type="button">Definitief verwijderen</button>
+    </div>
+  </div>
 </div>
 
 <script>
 (() => {
   const CFG = window.DASHBOARD_CONFIG || {};
-  const SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+  // lezen: drive.readonly; opdrachten schrijven: drive.file (enkel bestanden die dit dashboard zelf maakt)
+  const SCOPE = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file';
+  const CMD_FOLDER = 'Dashboard-opdrachten';
+  const HALF_YEAR = 182.5 * 864e5;
   let token = null, tokenExp = 0, tokenClient = null, timer = null, lastData = null, fileId = CFG.fileId;
+  let view = 'brein', filter = 'voorstel';
+  const selected = new Map();   // eventId -> {hours, label}
+  const expanded = new Set();
+  let pending = null, lastResult = null;
+  try { pending = JSON.parse(localStorage.getItem('pd_pending') || 'null'); } catch (e) {}
+
+  // ---------- pictogrammen (eigen tekeningen, 24x24) ----------
+  const ICONS = {
+    me: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
+    forex: '<path d="M6 3v4M6 15v5M12 2v5M12 13v9M18 5v4M18 15v4"/><rect x="4" y="7" width="4" height="8" rx="1"/><rect x="10" y="7" width="4" height="6" rx="1"/><rect x="16" y="9" width="4" height="6" rx="1"/>',
+    wallet: '<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M16 11h5v5h-5a2.5 2.5 0 010-5z"/><path d="M5 6l10-3 2 3"/>',
+    tv: '<rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M8 22h8M8 2l4 4 4-4"/>',
+    disk: '<ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/>',
+    trash: '<path d="M4 7h16M10 11v6M14 11v6M9 7V4h6v3M6 7l1 14h10l1-14"/>',
+    film: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4M3 16h4M17 8h4M17 16h4"/>',
+    run: '<circle cx="15" cy="4" r="2"/><path d="M5 20l4-5 3 2 2-5M10 8l4-1 3 4 3 1M9 11l-2 3-3 0M14 7l-2 5"/>',
+    flame: '<path d="M12 22a7 7 0 007-7c0-4-3-6-4-9-1 2-2 3-3 3 0-3-1-5-3-7 0 4-4 7-4 13a7 7 0 007 7z"/>',
+    cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'
+  };
+  const iconSvg = (k, size = 16) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>`;
+  document.querySelectorAll('nav.tabs a[data-icon]').forEach((a) => a.insertAdjacentHTML('afterbegin', iconSvg(a.dataset.icon)));
 
   // ---------- opmaak ----------
   const money = (v, cur, signed) => {
@@ -150,9 +297,11 @@
   const pct = (v, signed) => (v == null || isNaN(v)) ? '—' : (v < 0 ? '−' : (signed && v > 0 ? '+' : '')) + new Intl.NumberFormat('nl-BE', {maximumFractionDigits: 1}).format(Math.abs(v)) + '%';
   const when = (iso) => { const d = new Date(iso); return isNaN(d) ? '—' : d.toLocaleString('nl-BE', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'}); };
   const day = (iso) => { const d = new Date(iso); return isNaN(d) ? '—' : d.toLocaleDateString('nl-BE', {weekday: 'short', day: 'numeric', month: 'short'}); };
+  const date = (iso) => { const d = new Date(iso); return isNaN(d) ? '—' : d.toLocaleDateString('nl-BE', {day: 'numeric', month: 'short', year: 'numeric'}); };
   const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
   const tone = (e, v) => { e.classList.toggle('good', v > 0); e.classList.toggle('bad', v < 0); return e; };
   const $ = (id) => document.getElementById(id);
+  const save = () => { try { pending ? localStorage.setItem('pd_pending', JSON.stringify(pending)) : localStorage.removeItem('pd_pending'); } catch (e) {} };
 
   function tip(box) {
     let t = box.querySelector(':scope > .tip');
@@ -188,12 +337,16 @@
         $('app').classList.remove('hidden');
         $('logout').classList.remove('hidden');
         load();
-        clearInterval(timer);
-        timer = setInterval(() => { if (!document.hidden) load(); }, (CFG.refreshSeconds || 60) * 1000);
+        schedule();
       }
     });
     let seen = false; try { seen = !!localStorage.getItem('pd_seen'); } catch (e) {}
     if (seen) $('loginBtn').textContent = 'Doorgaan met Google';
+  }
+  function schedule() {
+    clearInterval(timer);
+    const s = pending ? 15 : (CFG.refreshSeconds || 60);
+    timer = setInterval(() => { if (!document.hidden) load(); }, s * 1000);
   }
   $('loginBtn').addEventListener('click', () => tokenClient && tokenClient.requestAccessToken({prompt: ''}));
   $('logout').addEventListener('click', () => {
@@ -206,14 +359,14 @@
 
   function needLogin(msg) {
     token = null; clearInterval(timer);
-    $('app').classList.add('hidden'); $('logout').classList.add('hidden');
+    $('app').classList.add('hidden'); $('logout').classList.add('hidden'); $('actionbar').classList.add('hidden');
     $('login').classList.remove('hidden');
     $('loginBtn').textContent = 'Opnieuw inloggen';
     $('loginMsg').textContent = msg || '';
   }
 
-  async function drive(url) {
-    const r = await fetch(url, {headers: {Authorization: 'Bearer ' + token}});
+  async function drive(url, opts = {}) {
+    const r = await fetch(url, {...opts, headers: {...(opts.headers || {}), Authorization: 'Bearer ' + token}});
     if (r.status === 401) { needLogin('Je sessie is verlopen.'); throw new Error('401'); }
     return r;
   }
@@ -251,7 +404,51 @@
     a.classList.toggle('err', !!err);
   }
 
-  // ---------- tekenen ----------
+  // ---------- weergaven ----------
+  function setView(v) {
+    view = ['brein', 'forex', 'telenet', 'sport'].includes(v) ? v : 'brein';
+    document.querySelectorAll('[data-view]').forEach((s) => s.classList.toggle('hidden', s.dataset.view !== view));
+    document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('on', a.dataset.v === view));
+    $('lede').classList.toggle('hidden', view !== 'brein');
+    if (lastData) render(lastData);
+    updateActionBar();
+  }
+  window.addEventListener('hashchange', () => setView(location.hash.slice(1)));
+  setView(location.hash.slice(1));
+
+  // ---------- afgeleide cijfers ----------
+  function telenetLib(t) {
+    const now = Date.now();
+    const hidden = new Set(pending ? pending.eventIds : []);
+    return (t.library || []).map((item) => {
+      const eps = (item.episodes || []).filter((e) => e.eventId && e.status !== 'planned' && !hidden.has(e.eventId)).map((e) => {
+        const tags = [];
+        if (e.watched === 'alreadyWatched') tags.push('bekeken');
+        else if (e.watched === 'notWatched' && now - new Date(e.start).getTime() > HALF_YEAR) tags.push('oud');
+        else if (e.watched === 'partiallyWatched') tags.push('deels');
+        return {...e, tags, label: (item.type === 'single' || e.episode == null) ? item.title : `${item.title} · S${e.season}E${e.episode}`};
+      });
+      return {...item, eps};
+    }).filter((i) => i.eps.length);
+  }
+  const isSugg = (e) => e.tags.includes('bekeken') || e.tags.includes('oud');
+  const sumH = (eps) => eps.reduce((s, e) => s + (e.hours || 0), 0);
+
+  function weekStats(acts) {
+    const mon = mondayOf(new Date());
+    const week = acts.filter((a) => new Date(a.start_local) >= mon);
+    const runs = week.filter(isRun);
+    const weeks = new Set(acts.map((a) => key(mondayOf(new Date(a.start_local)))));
+    let streak = 0, cur = new Date(mon);
+    if (!weeks.has(key(cur))) cur.setDate(cur.getDate() - 7);
+    while (weeks.has(key(cur))) { streak++; cur.setDate(cur.getDate() - 7); }
+    return {runKm: runs.reduce((s, a) => s + (a.distance_km || 0), 0), runs: runs.length, activities: week.length, streak};
+  }
+  const isRun = (a) => /Run/.test(a.sport || '');
+  const mondayOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+  const key = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+
+  // ---------- alles tekenen ----------
   function render(d) {
     $('updated').textContent = 'Mac mini bijgewerkt: ' + when(d.generated_at) + ' ';
     const ageMin = (Date.now() - new Date(d.generated_at).getTime()) / 60000;
@@ -259,29 +456,159 @@
     showAlert(ageMin > limit
       ? `Let op: de Mac mini heeft al ${ageMin < 120 ? Math.round(ageMin) + ' minuten' : Math.round(ageMin / 60) + ' uur'} niets nieuws gestuurd. Staat hij aan en draait de geplande taak? De cijfers kunnen verouderd zijn.`
       : '');
+    checkPending(d);
 
     const accounts = d.accounts || [];
     const strava = d.strava || {};
     const acts = strava.status === 'ok' ? (strava.activities || []) : [];
     const wk = weekStats(acts);
+    const t = d.telenet || {};
+    const lib = t.status === 'ok' ? telenetLib(t) : [];
 
     // samenvatting
     const ok = accounts.filter((a) => a.status === 'ok');
     const lede = $('lede'); lede.replaceChildren();
     const parts = [];
     if (ok.length) { const dp = ok.reduce((s, a) => s + (a.day_pl || 0), 0); parts.push(['Vandaag ', tone(el('b', null, money(dp, ok[0].currency, true)), dp), ' op je forex-accounts']); }
-    if (d.telenet && d.telenet.status === 'ok') parts.push(['Telenet-opslag ', el('b', null, pct(d.telenet.used_pct)), ' vol']);
+    if (t.status === 'ok') {
+      const can = sumH(lib.flatMap((i) => i.eps.filter(isSugg)));
+      parts.push(['Telenet ', el('b', null, pct(t.used_pct)), ' vol' + (can > 0.05 ? ` (${num(can, 1)} u kan weg)` : '')]);
+    }
     if (strava.status === 'ok') parts.push([el('b', null, num(wk.runKm, 1)), ' km gelopen deze week']);
     parts.forEach((p, i) => { if (i) lede.append(i === parts.length - 1 ? ' en ' : ', '); lede.append(...p); });
     if (parts.length) lede.append('.');
 
-    renderAccounts(accounts);
-    renderPositions(accounts);
-    renderTrades(accounts);
-    renderTelenet(d.telenet || {});
-    renderStrava(strava, acts, wk);
+    if (view === 'brein') renderBrain(accounts, t, lib, strava, acts, wk);
+    if (view === 'forex') { renderAccounts(accounts); renderPositions(accounts); renderTrades(accounts); }
+    if (view === 'telenet') renderTelenetView(t, lib, d.actions || []);
+    if (view === 'sport') renderStrava(strava, acts, wk);
   }
 
+  // ---------- BREIN ----------
+  function renderBrain(accounts, t, lib, strava, acts, wk) {
+    const box = $('brain'); box.replaceChildren();
+    const W = box.clientWidth || 360, narrow = W < 560;
+
+    const status = (s) => ({ok: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)'}[s] || 'var(--muted)');
+    const ok = accounts.filter((a) => a.status === 'ok');
+    const eq = ok.reduce((s, a) => s + (a.equity || 0), 0);
+    const can = lib.flatMap((i) => i.eps.filter(isSugg));
+    const canH = sumH(can);
+
+    const accChild = (a) => {
+      let st = 'ok';
+      if (a.status !== 'ok') st = 'none';
+      else {
+        const dd = a.start_balance && a.max_drawdown_pct ? Math.max(0, a.start_balance - a.equity) / (a.start_balance * a.max_drawdown_pct / 100) : 0;
+        const dl = a.start_balance && a.max_daily_loss_pct ? Math.max(0, -(a.day_pl || 0)) / (a.start_balance * a.max_daily_loss_pct / 100) : 0;
+        st = Math.max(dd, dl) >= 0.7 ? 'bad' : (a.day_pl < 0 ? 'warn' : 'ok');
+      }
+      return {icon: 'wallet', label: a.name, value: a.status === 'ok' ? money(a.equity, a.currency) : 'geen data', st, go: 'forex',
+        tip: a.status === 'ok' ? [a.name, 'Equity ' + money(a.equity, a.currency), 'Vandaag ' + money(a.day_pl, a.currency, true)] : [a.name, a.message || 'geen data']};
+    };
+    const topics = [
+      {key: 'forex', icon: 'forex', label: 'Forex', color: 'var(--c-forex)', angle: -90,
+        value: ok.length ? money(eq, ok[0].currency) : '—',
+        st: ok.length ? (ok.some((a) => (a.day_pl || 0) < 0) ? 'warn' : 'ok') : 'none',
+        tip: ['Forex', ok.length + ' account(s) gelezen'],
+        kids: accounts.slice(0, 4).map(accChild)},
+      {key: 'telenet', icon: 'tv', label: 'Telenet TV', color: 'var(--c-telenet)', angle: 30,
+        value: t.status === 'ok' ? pct(t.used_pct) + ' vol' : '—',
+        st: t.status !== 'ok' ? 'none' : (t.used_pct >= 90 ? 'bad' : t.used_pct >= 75 ? 'warn' : 'ok'),
+        tip: ['Telenet TV', t.status === 'ok' ? `${num(t.used_hours, 1)} van ${num(t.total_hours)} uur gebruikt` : (t.message || 'geen data')],
+        kids: t.status === 'ok' ? [
+          {icon: 'trash', label: 'Kan weg', value: num(canH, 1) + ' u', st: canH > 0.05 ? 'warn' : 'ok', go: 'telenet', f: 'voorstel',
+            tip: ['Kan weg', `${can.length} opnames, ${num(canH, 1)} uur`, 'Klik om te bekijken']},
+          {icon: 'disk', label: 'Vrij', value: num(t.free_hours, 1) + ' u', st: t.free_hours < 20 ? 'bad' : t.free_hours < 50 ? 'warn' : 'ok', go: 'telenet',
+            tip: ['Vrije ruimte', num(t.free_hours, 1) + ' uur']},
+          {icon: 'film', label: 'Bibliotheek', value: (t.library || []).length + ' titels', st: 'none', go: 'telenet', f: 'alles',
+            tip: ['Bibliotheek', (t.library || []).length + ' titels']}
+        ] : []},
+      {key: 'sport', icon: 'run', label: 'Sport', color: 'var(--c-sport)', angle: 150,
+        value: strava.status === 'ok' ? num(wk.runKm, 1) + ' km' : '—',
+        st: strava.status !== 'ok' ? 'none' : (wk.activities ? 'ok' : 'warn'),
+        tip: ['Sport (Strava)', strava.status === 'ok' ? `${num(wk.runKm, 1)} km gelopen deze week` : (strava.message || 'geen data')],
+        kids: strava.status === 'ok' ? [
+          {icon: 'cal', label: 'Deze week', value: wk.activities + ' activiteit' + (wk.activities === 1 ? '' : 'en'), st: wk.activities ? 'ok' : 'warn', go: 'sport',
+            tip: ['Deze week', `${wk.runs} looptraining(en), ${num(wk.runKm, 1)} km`]},
+          {icon: 'flame', label: 'Reeks', value: wk.streak + (wk.streak === 1 ? ' week' : ' weken'), st: wk.streak ? 'ok' : 'warn', go: 'sport',
+            tip: ['Weekreeks', wk.streak + ' week/weken op rij actief']},
+          acts[0] ? {icon: 'run', label: 'Laatste', value: day(acts[0].start_local), st: 'none', go: 'sport',
+            tip: [acts[0].name, `${num(acts[0].distance_km, 1)} km · ${acts[0].moving_min} min`]} : null
+        ].filter(Boolean) : []}
+    ];
+
+    // posities berekenen (abstracte coördinaten), daarna het geheel inpassen
+    const nodes = [], links = [];
+    const short = (txt, n) => (txt && txt.length > n ? txt.slice(0, n - 1) + '…' : txt);
+    if (!narrow) {
+      const R = 175, R2 = 125, spread = 50;
+      const pos = (a, r, ox = 0, oy = 0) => [ox + r * Math.cos(a * Math.PI / 180), oy + r * Math.sin(a * Math.PI / 180)];
+      nodes.push({x: 0, y: 0, r: 42, big: true, color: 'var(--accent)', n: {icon: 'me', label: 'Laurenz', value: '', st: 'none', tip: ['Alles op een rij', 'Klik op een onderwerp']}});
+      topics.forEach((t) => {
+        const [tx, ty] = pos(t.angle, R);
+        links.push({x1: 0, y1: 0, x2: tx, y2: ty, color: t.color, main: true});
+        t.kids.forEach((k, i) => {
+          const a = t.angle + (i - (t.kids.length - 1) / 2) * spread;
+          const [kx, ky] = pos(a, R2, tx, ty);
+          links.push({x1: tx, y1: ty, x2: kx, y2: ky, color: t.color});
+          nodes.push({x: kx, y: ky, r: 24, color: t.color, n: {...k, label: short(k.label, 16), go: k.go || t.key}});
+        });
+        nodes.push({x: tx, y: ty, r: 38, big: true, color: t.color, n: {icon: t.icon, label: t.label, value: t.value, st: t.st, tip: t.tip, go: t.key}});
+      });
+    } else {
+      // gsm: boomvorm van boven naar onder
+      const rowH = 150, x0 = 46, kidX = [140, 225, 310];
+      nodes.push({x: x0, y: 0, r: 34, big: true, color: 'var(--accent)', n: {icon: 'me', label: 'Laurenz', value: '', st: 'none', tip: ['Alles op een rij']}});
+      topics.forEach((t, ti) => {
+        const ty = 120 + ti * rowH;
+        links.push({x1: x0, y1: ti ? 120 + (ti - 1) * rowH : 0, x2: x0, y2: ty, color: t.color, main: true});
+        t.kids.slice(0, 3).forEach((k, i) => {
+          links.push({x1: x0, y1: ty, x2: kidX[i], y2: ty, color: t.color});
+          nodes.push({x: kidX[i], y: ty, r: 21, color: t.color, n: {...k, label: short(k.label, 11), go: k.go || t.key}});
+        });
+        nodes.push({x: x0, y: ty, r: 30, big: true, color: t.color, n: {icon: t.icon, label: t.label, value: t.value, st: t.st, tip: t.tip, go: t.key}});
+      });
+    }
+    const pad = 12;
+    const x0 = d3.min(nodes, (d) => d.x - Math.max(d.r, 56)) - pad, x1 = d3.max(nodes, (d) => d.x + Math.max(d.r, 56)) + pad;
+    const y0 = d3.min(nodes, (d) => d.y - d.r) - pad - 8, y1 = d3.max(nodes, (d) => d.y + d.r + 36) + pad + 18;
+    const vw = x1 - x0, vh = y1 - y0;
+    const svg = d3.select(box).append('svg').attr('viewBox', `${x0} ${y0} ${vw} ${vh}`)
+      .style('max-height', narrow ? 'none' : '600px')
+      .attr('role', 'img').attr('aria-label', 'Brein: ' + topics.map((t) => `${t.label} ${t.value}`).join(', '));
+    const gLinks = svg.append('g'), gNodes = svg.append('g');
+    const tt = tip(box);
+    const scale = () => box.clientWidth / vw;   // voor de tooltip-positie
+
+    links.forEach((l) => {
+      const p = l.curve ? `M${l.x1},${l.y1} C${l.x1},${(l.y1 + l.y2) / 2} ${l.x2},${l.y1 + 20} ${l.x2},${l.y2}`
+        : l.main ? `M${l.x1},${l.y1} L${l.x2},${l.y2}`
+        : `M${l.x1},${l.y1} Q${(l.x1 + l.x2) / 2 + (l.y2 - l.y1) * 0.12},${(l.y1 + l.y2) / 2 - (l.x2 - l.x1) * 0.12} ${l.x2},${l.y2}`;
+      gLinks.append('path').attr('d', p).attr('fill', 'none').attr('stroke', l.color)
+        .attr('stroke-opacity', l.main ? .45 : .3).attr('stroke-width', l.main ? 2.5 : 1.5).attr('stroke-dasharray', l.main ? null : '3 4');
+    });
+
+    nodes.forEach(({x, y, r, big, color, n}) => {
+      const g = gNodes.append('g').attr('class', 'node').attr('transform', `translate(${x},${y})`)
+        .attr('tabindex', 0).attr('role', 'button').attr('aria-label', `${n.label}: ${n.value || ''}`);
+      if (n.st === 'warn' || n.st === 'bad') g.append('circle').attr('class', 'pulse').attr('r', r).attr('fill', 'none').attr('stroke', status(n.st)).attr('stroke-width', 2);
+      g.append('circle').attr('class', 'disc').attr('r', r).attr('fill', 'var(--panel)');
+      g.append('circle').attr('r', r).attr('fill', color).attr('opacity', .16);
+      g.append('circle').attr('class', 'ring').attr('r', r).attr('fill', 'none').attr('stroke', n.st && n.st !== 'none' ? status(n.st) : color).attr('stroke-width', big ? 3 : 2);
+      const s = Math.round(r * 0.95);
+      g.append('g').attr('transform', `translate(${-s / 2},${-s / 2})`).style('color', color)
+        .html(`<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="${big ? 1.8 : 2}" stroke-linecap="round" stroke-linejoin="round">${ICONS[n.icon]}</svg>`);
+      g.append('text').attr('class', 'lbl').attr('text-anchor', 'middle').attr('y', r + 16).style('font-size', big ? '14px' : '12.5px').text(n.label);
+      if (n.value) g.append('text').attr('class', 'val').attr('text-anchor', 'middle').attr('y', r + 31).text(n.value);
+      const go = () => { if (n.f) { filter = n.f; syncChips(); } if (n.go) location.hash = n.go; };
+      g.on('click', go).on('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(); } });
+      if (n.tip) g.on('pointerenter', () => { const k = scale(); tt.show(n.tip, (x - x0) * k, (y - y0 - r) * k); }).on('pointerleave', () => tt.hide());
+    });
+    box.append(el('div', 'hint', 'Klik op een bol om in te zoomen. Een knipperende rand vraagt aandacht.'));
+  }
+
+  // ---------- FOREX ----------
   function renderAccounts(accounts) {
     const box = $('accounts'); box.replaceChildren();
     if (!accounts.length) { box.append(el('div', 'empty', 'Nog geen accounts in dashboard.json.')); return; }
@@ -346,52 +673,229 @@
       tb.append(tr);
     });
   }
-
   function renderPositions(accounts) {
     const rows = accounts.flatMap((a) => (a.positions || []).map((p) => [[a.name], [p.symbol], [p.side], [num(p.volume, 2), 'num'], [String(p.open_price), 'num'], [money(p.profit, a.currency, true), 'num', p.profit]]));
     fillTable($('positions'), rows, 'Geen open posities.', 6);
   }
-
   function renderTrades(accounts) {
     const all = accounts.flatMap((a) => (a.trades || []).map((t) => ({...t, account: a.name, currency: a.currency})))
       .sort((x, y) => (x.closed_at < y.closed_at ? 1 : -1)).slice(0, 12);
     fillTable($('trades'), all.map((t) => [[when(t.closed_at)], [t.account], [t.symbol], [t.side], [num(t.volume, 2), 'num'], [money(t.profit, t.currency, true), 'num', t.profit]]), 'Nog geen gesloten trades.', 6);
   }
 
-  function renderTelenet(t) {
+  // ---------- TELENET ----------
+  function syncChips() { document.querySelectorAll('#chips .chip').forEach((c) => c.classList.toggle('on', c.dataset.f === filter)); }
+  $('chips').addEventListener('click', (ev) => {
+    const c = ev.target.closest('.chip'); if (!c) return;
+    filter = c.dataset.f; syncChips(); if (lastData) render(lastData);
+  });
+
+  function renderTelenetView(t, lib, actions) {
+    // status van een lopende opdracht
+    const st = $('tvStatus'); st.replaceChildren();
+    if (pending) {
+      const a = el('div', 'alert');
+      a.innerHTML = '<span class="spin"></span>';
+      a.append(`Opdracht verstuurd om ${when(pending.at)}: ${pending.eventIds.length} opname(s), ${num(pending.hours, 1)} u. ` +
+        'De Mac mini voert ze uit zodra Google Drive de opdracht heeft doorgegeven (meestal 1 à 2 minuten).');
+      if (Date.now() - new Date(pending.at).getTime() > 20 * 60000) {
+        a.className = 'alert err';
+        a.textContent = 'De Mac mini heeft de opdracht na 20 minuten nog niet uitgevoerd. Staat hij aan? Opdrachten ouder dan 15 minuten worden voor de veiligheid niet meer uitgevoerd.';
+        const b = el('button', 'btn ghost small', 'Melding sluiten'); b.style.marginLeft = '8px';
+        b.onclick = () => { pending = null; save(); schedule(); render(lastData); };
+        a.append(b);
+      }
+      st.append(a);
+    } else if (lastResult) {
+      const a = el('div', 'alert ' + (lastResult.status === 'ok' ? 'ok' : 'err'));
+      a.textContent = lastResult.status === 'ok'
+        ? `✓ ${lastResult.count} opname(s) verwijderd, ${num(lastResult.hours, 1)} u vrijgemaakt.`
+        : `Niet uitgevoerd: ${lastResult.message || lastResult.status}`;
+      st.append(a);
+    }
+
+    // opslag
     const c = $('telenet'); c.replaceChildren();
     const top = el('div', 'card-top');
     top.append(el('span', 'name', 'Opnameruimte'), el('span', 'small muted', t.measured_at ? 'gemeten ' + when(t.measured_at) : ''));
     c.append(top);
-    if (t.status !== 'ok') { c.append(el('div', 'empty', t.message || 'Nog geen meting.')); return; }
+    if (t.status !== 'ok') { c.append(el('div', 'empty', t.message || 'Nog geen meting.')); $('lib').replaceChildren(); $('sugg').replaceChildren(); return; }
     c.append(el('div', 'big', pct(t.used_pct) + ' vol'));
+    const selH = [...selected.values()].reduce((s, v) => s + v.hours, 0);
+    const after = Math.max(0, t.used_hours - selH) / t.total_hours * 100;
     const bar = el('div', 'bar'), fill = el('span');
     fill.style.width = Math.min(100, t.used_pct) + '%';
     if (t.used_pct >= 90) fill.style.background = 'var(--bad)';
-    bar.append(fill); c.append(bar);
+    bar.append(fill);
+    if (selH > 0) { const pv = el('span', 'preview'); pv.style.width = Math.min(100, after) + '%'; bar.append(pv); }
+    c.append(bar);
+    if (selH > 0) c.append(el('div', 'small good', `Na verwijderen van je selectie: ${pct(after)} vol (${num(selH, 1)} u vrij erbij)`));
     const dl = el('dl', 'kv');
     [['Gebruikt', num(t.used_hours, 1) + ' uur'], ['Vrij', num(t.free_hours, 1) + ' uur'], ['Totaal', num(t.total_hours) + ' uur']]
       .forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, v)));
     c.append(dl);
+    if (t.message) c.append(el('div', 'small warn', t.message));
+
+    // voorstellen
+    const all = lib.flatMap((i) => i.eps);
+    const w = all.filter((e) => e.tags.includes('bekeken')), o = all.filter((e) => e.tags.includes('oud'));
+    const sg = $('sugg'); sg.replaceChildren();
+    [[w, 'Al bekeken', 'bekeken'], [o, 'Ouder dan 6 maanden, nooit bekeken', 'oud']].forEach(([list, label, f]) => {
+      const b = el('div', 'box');
+      b.append(el('div', 'small muted', label), el('div', 'big', num(sumH(list), 1) + ' u'), el('div', 'small muted', list.length + ' opname(s)'));
+      const row = el('div'); row.style.marginTop = '8px'; row.style.display = 'flex'; row.style.gap = '6px'; row.style.flexWrap = 'wrap';
+      const bShow = el('button', 'btn ghost small', 'Bekijken'); bShow.onclick = () => { filter = f; syncChips(); render(lastData); $('lib').scrollIntoView({behavior: 'smooth', block: 'start'}); };
+      const bSel = el('button', 'btn ghost small', 'Alles selecteren'); bSel.disabled = !list.length || !!pending;
+      bSel.onclick = () => { list.forEach((e) => selected.set(e.eventId, {hours: e.hours || 0, label: e.label})); render(lastData); updateActionBar(); };
+      row.append(bShow, bSel); b.append(row); sg.append(b);
+    });
+
+    // bibliotheek
+    const fil = (e) => filter === 'alles' ? true : filter === 'voorstel' ? isSugg(e) : e.tags.includes(filter);
+    const items = lib.map((i) => ({...i, vis: i.eps.filter(fil)})).filter((i) => i.vis.length)
+      .sort((a, b) => sumH(b.vis) - sumH(a.vis));
+    $('libCount').textContent = `${items.length} titel(s) · ${num(sumH(items.flatMap((i) => i.vis)), 1)} u`;
+    const box = $('lib'); box.replaceChildren();
+    if (!items.length) { box.append(el('div', 'empty', filter === 'alles' ? 'Geen opnames.' : 'Niets gevonden voor deze filter. Mooi zo!')); }
+    const badge = (tags) => {
+      const f = document.createDocumentFragment();
+      if (tags.includes('bekeken')) f.append(el('span', 'badge w', '✓ bekeken'));
+      if (tags.includes('oud')) f.append(el('span', 'badge o', '6+ mnd'));
+      if (tags.includes('deels')) f.append(el('span', 'badge p', 'deels'));
+      return f;
+    };
+    items.forEach((it) => {
+      const single = it.eps.length === 1 && (it.type === 'single' || it.vis[0].episode == null);
+      const open = expanded.has(it.id);
+      const row = el('div', 'lib-row show' + (open ? ' open' : ''));
+      const cb = el('input'); cb.type = 'checkbox'; cb.disabled = !!pending;
+      const nSel = it.vis.filter((e) => selected.has(e.eventId)).length;
+      cb.checked = nSel === it.vis.length; cb.indeterminate = nSel > 0 && nSel < it.vis.length;
+      cb.setAttribute('aria-label', 'Selecteer ' + it.title);
+      cb.onclick = (ev) => { ev.stopPropagation(); const on = nSel < it.vis.length; it.vis.forEach((e) => on ? selected.set(e.eventId, {hours: e.hours || 0, label: e.label}) : selected.delete(e.eventId)); render(lastData); updateActionBar(); };
+      const ti = el('div', 'lib-title');
+      const tt = el('div', 't');
+      if (!single) tt.append(el('span', 'chev', '›'));
+      tt.append(it.title);
+      const tags = [...new Set(it.vis.flatMap((e) => e.tags))];
+      tt.append(badge(single ? it.vis[0].tags : tags.filter((x) => x !== 'deels')));
+      const meta = single
+        ? `${it.channel || ''} · opgenomen ${date(it.vis[0].start)}`
+        : `${it.channel || ''} · ${it.vis.length}${it.vis.length !== it.eps.length ? ' van ' + it.eps.length : ''} aflevering(en)`;
+      ti.append(tt, el('div', 'm', meta));
+      const right = el('div', 'lib-right', num(sumH(it.vis), 1) + ' u');
+      row.append(cb, ti, right);
+      if (!single) {
+        row.onclick = () => { open ? expanded.delete(it.id) : expanded.add(it.id); render(lastData); };
+        row.tabIndex = 0; row.onkeydown = (ev) => { if (ev.key === 'Enter') row.onclick(); };
+      } else {
+        row.onclick = () => cb.onclick(new Event('click'));
+      }
+      box.append(row);
+      if (!single && open) {
+        it.vis.slice().sort((a, b) => (a.start < b.start ? -1 : 1)).forEach((e) => {
+          const r = el('div', 'lib-row ep');
+          const c2 = el('input'); c2.type = 'checkbox'; c2.checked = selected.has(e.eventId); c2.disabled = !!pending;
+          c2.setAttribute('aria-label', 'Selecteer ' + e.label);
+          c2.onclick = (ev) => { ev.stopPropagation(); c2.checked ? selected.set(e.eventId, {hours: e.hours || 0, label: e.label}) : selected.delete(e.eventId); render(lastData); updateActionBar(); };
+          const t2 = el('div', 'lib-title');
+          const tx = el('div', 't', (e.episode != null ? `S${e.season}E${e.episode} · ` : '') + (e.title || ''));
+          tx.append(badge(e.tags));
+          t2.append(tx, el('div', 'm', 'opgenomen ' + date(e.start)));
+          r.append(c2, t2, el('div', 'lib-right', num(e.hours, 1) + ' u'));
+          r.onclick = () => c2.click();
+          box.append(r);
+        });
+      }
+    });
+
+    // geschiedenis
+    const h = $('hist'); h.replaceChildren();
+    if (!actions.length) h.append(el('li', 'muted', 'Nog geen acties.'));
+    actions.slice(0, 8).forEach((a) => {
+      const li = el('li');
+      const ok = a.status === 'ok';
+      li.append(el('span', ok ? 'good' : 'bad', ok ? '✓ ' : '✗ '), `${when(a.done_at)} · `);
+      li.append(ok ? `${a.count} opname(s) verwijderd (${num(a.hours, 1)} u)` + (a.titles && a.titles.length ? ': ' + a.titles.slice(0, 4).join(', ') + (a.titles.length > 4 ? '…' : '') : '')
+        : `niet uitgevoerd: ${a.message || a.status}`);
+      h.append(li);
+    });
   }
 
-  // ---------- Strava ----------
-  const isRun = (a) => /Run/.test(a.sport || '');
-  const mondayOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
-  const key = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  // ---------- selectie, bevestiging en opdracht ----------
+  function updateActionBar() {
+    const n = selected.size, show = view === 'telenet' && n > 0 && !pending;
+    $('actionbar').classList.toggle('hidden', !show);
+    if (!show) return;
+    const h = [...selected.values()].reduce((s, v) => s + v.hours, 0);
+    $('selInfo').replaceChildren(el('b', null, `${n} opname(s) geselecteerd`), ` · ${num(h, 1)} u vrij te maken`);
+  }
+  $('selClear').onclick = () => { selected.clear(); render(lastData); updateActionBar(); };
+  $('selDelete').onclick = () => {
+    const vals = [...selected.values()];
+    const h = vals.reduce((s, v) => s + v.hours, 0);
+    const body = $('mBody'); body.replaceChildren();
+    body.append(el('p', null, `Je staat op het punt ${vals.length} opname(s) te verwijderen. Dat maakt ${num(h, 1)} uur vrij. Dit kan niet ongedaan gemaakt worden.`));
+    const ul = el('ul');
+    vals.slice(0, 15).forEach((v) => ul.append(el('li', null, `${v.label} (${num(v.hours, 1)} u)`)));
+    if (vals.length > 15) ul.append(el('li', 'muted', `… en nog ${vals.length - 15}`));
+    body.append(ul, el('p', 'muted', 'De Mac mini voert de opdracht uit via je Telenet-koppeling, meestal binnen 1 à 2 minuten.'));
+    $('modal').classList.remove('hidden');
+    $('mOk').disabled = false; $('mOk').textContent = 'Definitief verwijderen';
+    $('mCancel').focus();
+  };
+  $('mCancel').onclick = () => $('modal').classList.add('hidden');
+  $('modal').addEventListener('keydown', (ev) => { if (ev.key === 'Escape') $('modal').classList.add('hidden'); });
+  $('mOk').onclick = async () => {
+    $('mOk').disabled = true; $('mOk').textContent = 'Versturen…';
+    try {
+      const ids = [...selected.keys()];
+      const hours = [...selected.values()].reduce((s, v) => s + v.hours, 0);
+      const id = 'cmd-' + new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 7);
+      await sendCommand(id, {id, action: 'telenet_delete', confirmed: true, created_at: new Date().toISOString(),
+        eventIds: ids, titles: [...selected.values()].map((v) => v.label).slice(0, 50), hours, source: location.href});
+      pending = {id, eventIds: ids, hours, at: new Date().toISOString()};
+      lastResult = null; save(); selected.clear();
+      $('modal').classList.add('hidden');
+      schedule(); render(lastData); updateActionBar();
+    } catch (e) {
+      $('mOk').disabled = false; $('mOk').textContent = 'Opnieuw proberen';
+      $('mBody').append(el('p', 'bad', 'Versturen mislukt: ' + e.message));
+    }
+  };
 
-  function weekStats(acts) {
-    const mon = mondayOf(new Date());
-    const week = acts.filter((a) => new Date(a.start_local) >= mon);
-    const runs = week.filter(isRun);
-    // weekreeks: opeenvolgende weken met minstens 1 activiteit
-    const weeks = new Set(acts.map((a) => key(mondayOf(new Date(a.start_local)))));
-    let streak = 0, cur = new Date(mon);
-    if (!weeks.has(key(cur))) cur.setDate(cur.getDate() - 7);
-    while (weeks.has(key(cur))) { streak++; cur.setDate(cur.getDate() - 7); }
-    return {runKm: runs.reduce((s, a) => s + (a.distance_km || 0), 0), runs: runs.length, activities: week.length, streak};
+  async function cmdFolderId() {
+    const q = encodeURIComponent(`name = '${CMD_FOLDER}' and mimeType = 'application/vnd.google-apps.folder' and 'root' in parents and trashed = false`);
+    const r = await drive(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`);
+    const j = await r.json();
+    if (j.files && j.files[0]) return j.files[0].id;
+    const c = await drive('https://www.googleapis.com/drive/v3/files?fields=id', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: CMD_FOLDER, mimeType: 'application/vnd.google-apps.folder', parents: ['root']})
+    });
+    if (!c.ok) throw new Error(c.status === 403 ? 'het dashboard heeft nog geen schrijfrechten. Log uit en opnieuw in, en vink de toestemming aan.' : 'map aanmaken gaf fout ' + c.status);
+    return (await c.json()).id;
+  }
+  async function sendCommand(name, payload) {
+    const folder = await cmdFolderId();
+    const b = 'pd' + Math.random().toString(36).slice(2);
+    const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
+      JSON.stringify({name: name + '.json', parents: [folder], mimeType: 'application/json'}) +
+      `\r\n--${b}\r\nContent-Type: application/json\r\n\r\n` + JSON.stringify(payload) + `\r\n--${b}--`;
+    const r = await drive('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'POST', headers: {'Content-Type': 'multipart/related; boundary=' + b}, body
+    });
+    if (r.status === 403) throw new Error('geen schrijfrechten. Log uit en opnieuw in, en geef het dashboard toestemming om bestanden aan te maken.');
+    if (!r.ok) throw new Error('Google Drive gaf fout ' + r.status);
   }
 
+  function checkPending(d) {
+    if (!pending) return;
+    const done = (d.actions || []).find((a) => a.id === pending.id);
+    if (done) { lastResult = done; pending = null; save(); schedule(); }
+  }
+
+  // ---------- SPORT ----------
   function renderStrava(strava, acts, wk) {
     const c = $('week'); c.replaceChildren();
     c.append(el('div', 'small muted', 'Deze week gelopen'));
@@ -405,10 +909,9 @@
       c.append(dl);
     }
     renderWeeks(acts, strava.status === 'ok');
-    fillTable($('acts'), acts.slice(0, 6).map((a) => [[day(a.start_local)], [a.name], [a.sport], [num(a.distance_km, 2), 'num'], [String(a.moving_min), 'num'], [a.pace || '—']]),
+    fillTable($('acts'), acts.slice(0, 8).map((a) => [[day(a.start_local)], [a.name], [a.sport], [num(a.distance_km, 2), 'num'], [String(a.moving_min), 'num'], [a.pace || '—']]),
       strava.status === 'ok' ? 'Geen activiteiten.' : '—', 6);
   }
-
   function renderWeeks(acts, ok) {
     const box = $('weeks'); box.replaceChildren();
     if (!ok || !window.d3) { box.append(el('div', 'empty', '—')); return; }
@@ -430,7 +933,7 @@
     const tt = tip(box);
     svg.selectAll('rect').data(data).join('rect')
       .attr('x', (d) => x(d.k)).attr('width', x.bandwidth()).attr('y', (d) => y(d.km)).attr('height', (d) => Math.max(0, y(0) - y(d.km))).attr('rx', 3)
-      .attr('fill', (d, i) => i === data.length - 1 ? 'var(--accent)' : 'var(--bar-muted)')
+      .attr('fill', (d, i) => i === data.length - 1 ? 'var(--c-sport)' : 'var(--bar-muted)')
       .on('pointerenter pointermove', (ev, d) => tt.show(['Week van ' + lab(d), num(d.km, 1) + ' km gelopen'], x(d.k) + x.bandwidth() / 2, y(d.km)))
       .on('pointerleave', () => tt.hide());
     svg.selectAll('text.v').data(data).join('text').attr('class', 'v').attr('text-anchor', 'middle')
