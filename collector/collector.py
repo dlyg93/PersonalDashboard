@@ -12,6 +12,7 @@ Gebruik:
   python collector.py            -> verzamel 1x en schrijf dashboard.json
   python collector.py --test     -> verzamel 1x, toon alles in de console, schrijf niets
   python collector.py --find-telenet -> zoek waar je Telenet MCP-server staat
+  python collector.py --telegram-test -> toon het ochtendbericht zonder het te versturen
 """
 
 import json
@@ -561,6 +562,7 @@ def collect_strava(cfg):
                 "distance_km": round(dist_km, 2),
                 "moving_min": round(mov / 60),
                 "pace": pace,
+                "pace_s": round(mov / dist_km) if dist_km > 0.05 else None,
                 "elevation_m": round(a.get("total_elevation_gain") or 0),
             })
         out.update(status="ok", activities=rows)
@@ -587,6 +589,39 @@ def collect_strava_cached(cfg):
         try:
             os.makedirs(SECRETS_DIR, exist_ok=True)
             with open(STRAVA_CACHE, "w", encoding="utf-8") as f:
+                json.dump(dict(out, _fetched=time.time()), f)
+        except OSError:
+            pass
+    return out
+
+
+WHOOP_CACHE = os.path.join(SECRETS_DIR, "whoop_cache.json")
+
+
+def collect_whoop_cached(cfg):
+    """Whoop: om de 30 minuten opvragen. Gezondheidsgegevens blijven op de Mac mini en in je eigen Drive."""
+    if cfg.get("enabled", True) is False:
+        return {"status": "off"}
+    try:
+        import whoop
+    except ImportError:
+        return {"status": "error", "message": "whoop.py ontbreekt"}
+    if not os.path.exists(whoop.SECRETS):
+        return {"status": "error", "message": "Whoop nog niet gekoppeld: start whoop_koppelen.bat"}
+    try:
+        with open(WHOOP_CACHE, "r", encoding="utf-8") as f:
+            cached = json.load(f)
+        if cached.get("status") == "ok" and (time.time() - cached["_fetched"]) / 60 < cfg.get("every_minutes", 30):
+            return {k: v for k, v in cached.items() if k != "_fetched"}
+    except (OSError, ValueError, KeyError):
+        pass
+    log("Whoop: herstel, slaap en gewicht ophalen...")
+    out = whoop.collect(os.path.join(HERE, ".weight_history.json"))
+    out["measured_at"] = iso(now_local())
+    if out.get("status") == "ok":
+        try:
+            os.makedirs(SECRETS_DIR, exist_ok=True)
+            with open(WHOOP_CACHE, "w", encoding="utf-8") as f:
                 json.dump(dict(out, _fetched=time.time()), f)
         except OSError:
             pass
@@ -772,6 +807,16 @@ def collect(config):
 
     telenet = collect_telenet_cached(config.get("telenet", {}))
     strava = collect_strava_cached(config.get("strava", {}))
+    whoop_data = collect_whoop_cached(config.get("whoop", {}))
+    marathon_data = None
+    try:
+        import marathon
+        plan = marathon.load_plan(os.path.join(HERE, config.get("marathon_plan", "marathon_plan.json")))
+        if plan:
+            marathon_data = marathon.evaluate(plan, strava.get("activities") if strava.get("status") == "ok" else [],
+                                              recovery={"score": ((whoop_data or {}).get("today") or {}).get("recovery")})
+    except Exception as e:
+        marathon_data = {"status": "error", "message": f"Marathonplan: {e}"}
 
     return {
         "strava": strava,
@@ -783,6 +828,8 @@ def collect(config):
         "accounts": accounts,
         "telenet": telenet,
         "actions": load_actions_log()[:10],
+        "whoop": whoop_data,
+        "marathon": marathon_data,
     }
 
 
@@ -878,12 +925,30 @@ def main():
             log(f"  Telenet: {t['status']} - {t.get('message')}")
         s = data["strava"]
         log(f"  Strava: {len(s['activities'])} activiteiten" if s["status"] == "ok" else f"  Strava: {s['status']} - {s.get('message')}")
+        w = data.get("whoop") or {}
+        if w.get("status") == "ok":
+            log(f"  Whoop: herstel {(w.get('today') or {}).get('recovery')}%, gewicht {(w.get('weight') or {}).get('kg')} kg")
+        elif w.get("status") != "off":
+            log(f"  Whoop: {w.get('message')}")
+        m = data.get("marathon") or {}
+        if m.get("status") == "ok":
+            log(f"  Marathon: nog {m['days_left']} dagen, vandaag {m['today']['label']} ({m['today']['status']})")
 
+        if "--telegram-test" in args:
+            import telegram_bericht
+            print(telegram_bericht.compose(data))
+            return
         if "--test" in args:
             print(json.dumps(data, ensure_ascii=False, indent=2))
             return
         path = write_output(data, config)
         state["last_full"] = time.time()
+        try:
+            import telegram_bericht
+            if telegram_bericht.maybe_send(data, state):
+                log("Telegram: ochtendbericht verstuurd")
+        except Exception as e:
+            log(f"Telegram: {e}")
         try:
             with open(STATE_PATH, "w", encoding="utf-8") as f:
                 json.dump(state, f)
