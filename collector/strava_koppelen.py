@@ -14,15 +14,25 @@ import json
 import os
 import threading
 import urllib.parse
+import urllib.error
 import urllib.request
 import webbrowser
+
+# Gebruik de certificaten van Windows zelf (zoals je browser). Nodig als een antivirus of
+# netwerkfilter HTTPS-verkeer scant met een eigen certificaat. De beveiliging blijft aan.
+try:
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:
+    pass
 
 PORT = 8765
 SECRETS_DIR = os.path.join(os.path.expanduser("~"), ".personal-dashboard")
 SECRETS = os.path.join(SECRETS_DIR, "strava.json")
 
 client_id = input("Strava Client ID: ").strip()
-client_secret = input("Strava Client Secret: ").strip()
+client_secret = input("Strava Client Secret: ").strip().strip("'\"")
+print(f"(secret ontvangen: {len(client_secret)} tekens, verwacht 40)")
 
 redirect = f"http://localhost:{PORT}/"
 auth_url = "https://www.strava.com/oauth/authorize?" + urllib.parse.urlencode({
@@ -67,8 +77,16 @@ data = urllib.parse.urlencode({
     "client_id": client_id, "client_secret": client_secret,
     "code": result["code"], "grant_type": "authorization_code",
 }).encode()
-with urllib.request.urlopen(urllib.request.Request("https://www.strava.com/oauth/token", data=data), timeout=30) as r:
-    tok = json.loads(r.read().decode("utf-8"))
+try:
+    with urllib.request.urlopen(urllib.request.Request("https://www.strava.com/oauth/token", data=data), timeout=30) as r:
+        tok = json.loads(r.read().decode("utf-8"))
+except urllib.error.HTTPError as e:
+    detail = e.read().decode("utf-8", errors="replace")
+    print(f"\nStrava weigerde de koppeling (HTTP {e.code}): {detail}")
+    if e.code in (400, 401):
+        print("Meestal klopt de Client Secret niet bij deze Client ID (verkeerd geplakt, of intussen vernieuwd).")
+        print("Kopieer beide opnieuw van https://www.strava.com/settings/api (klik bij Client Secret op 'Tonen').")
+    raise SystemExit(1)
 
 os.makedirs(SECRETS_DIR, exist_ok=True)
 with open(SECRETS, "w", encoding="utf-8") as f:
