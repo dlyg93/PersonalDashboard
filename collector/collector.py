@@ -25,6 +25,14 @@ import time
 import traceback
 from datetime import datetime, timedelta, timezone
 
+# Gebruik de certificaten van Windows zelf (zoals je browser). Nodig als een antivirus of
+# netwerkfilter HTTPS-verkeer scant met een eigen certificaat. De beveiliging blijft aan.
+try:
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:
+    pass
+
 VERSION = 1
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "config.json")
