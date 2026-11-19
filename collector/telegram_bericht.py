@@ -39,6 +39,10 @@ def _money(v, cur="USD"):
     return ("−" if v < 0 else "") + sym + s
 
 
+def _esc(s):
+    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def compose(data, dashboard_url=None):
     t = date.today()
     lines = [f"☀️ <b>Goeiemorgen Laurenz</b> — {DAGEN[t.weekday()]} {t.day} {MAANDEN[t.month - 1]}"]
@@ -72,6 +76,22 @@ def compose(data, dashboard_url=None):
                 msg += f" ({'+' if d > 0 else '−'}{_num(abs(d))} kg op 30 dagen)"
             msg += " · doel 95 kg"
             lines.append(msg)
+
+    ag = data.get("agenda") or {}
+    if ag.get("status") == "ok":
+        iso_t = t.isoformat()
+        evs = [e for e in ag.get("events", []) if e["start"][:10] <= iso_t and (e["all_day"] and (e.get("end") or "9999") > iso_t or e["start"][:10] == iso_t)]
+        bd = [b for b in ag.get("birthdays", []) if b["days"] <= 1]
+        if evs or bd:
+            lines.append("")
+        for b in bd:
+            lines.append(f"🎂 {'Vandaag' if b['days'] == 0 else 'Morgen'} jarig: <b>{_esc(b['name'])}</b>" + (f" ({b['age']})" if b.get("age") else ""))
+        if evs:
+            lines.append(f"📅 Vandaag {len(evs)} afspra{'ak' if len(evs) == 1 else 'ken'}:")
+            for e in evs[:6]:
+                lines.append(f"   {'hele dag' if e['all_day'] else e['start'][11:16]} · {_esc(e['title'])}")
+            if len(evs) > 6:
+                lines.append(f"   … en nog {len(evs) - 6}")
 
     m = data.get("marathon") or {}
     if m.get("status") == "ok":

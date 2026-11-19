@@ -39,5 +39,11 @@
     "enabled": true,
     "every_minutes": 30
   },
-  "marathon_plan": "marathon_plan.json"
+  "marathon_plan": "marathon_plan.json",
+  "agenda": {
+    "enabled": true,
+    "days": 14,
+    "birthday_days": 60,
+    "every_minutes": 15
+  }
 }
