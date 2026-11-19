@@ -63,7 +63,16 @@ Voorbeeld bekijken zonder te versturen: `python collector.py --telegram-test`.
 Je mag het bestand aanpassen; de collector toetst elke Strava-loop aan de sessie van die week.
 Opnieuw genereren: `python maak_marathonplan.py marathon_plan.json --overschrijf`.
 
-## 6. De collector op de Mac mini
+## 6. iCloud-agenda en verjaardagen (eenmalig, ~3 min)
+
+1. Maak op <https://account.apple.com> een app-specifiek wachtwoord (Inloggen en beveiliging → App-specifieke wachtwoorden).
+2. Dubbelklik op de Mac mini op `icloud_koppelen.bat`, geef je Apple ID en dat wachtwoord, en kies welke agenda's je wil zien.
+3. Afspraken (14 dagen vooruit) worden om de 15 minuten opgehaald, verjaardagen uit je contacten om de 12 uur.
+
+Het dashboard leest enkel: het verandert niets in je agenda of contacten.
+Het wachtwoord staat alleen in `%USERPROFILE%\.personal-dashboard\icloud.json`.
+
+## 7. De collector op de Mac mini
 
 Zie de map `collector/`. Kort: `installeer.bat` → paden van je MT5-terminals invullen in
 `config.json` → `installeer.bat` opnieuw. Daarna draait het elke 5 minuten via Taakplanner.

@@ -13,7 +13,7 @@ if errorlevel 1 (
 )
 
 echo [1/3] Python-pakket MetaTrader5 installeren...
-python -m pip install --upgrade MetaTrader5 truststore
+python -m pip install --upgrade MetaTrader5 truststore icalendar recurring-ical-events
 echo.
 
 if not exist config.json (
