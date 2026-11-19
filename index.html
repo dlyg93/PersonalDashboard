@@ -142,6 +142,11 @@
   .bd { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
   .bd .when { color: var(--muted); font-size: 13px; white-space: nowrap; }
   .bd.soon .when { color: var(--c-agenda); font-weight: 600; }
+  .jarvis-fab { position: fixed; right: 18px; bottom: 18px; z-index: 15; display: inline-flex; align-items: center; gap: 8px; padding: 11px 16px 11px 13px; border-radius: 999px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; box-shadow: 0 8px 24px rgba(59,130,246,.35); }
+  .jarvis-fab svg { width: 20px; height: 20px; }
+  .jarvis-fab:hover { filter: brightness(1.1); }
+  .jarvis-fab:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+  @media (prefers-reduced-motion: no-preference) { .jarvis-fab .dot { animation: jdot 2.4s ease-in-out infinite; } @keyframes jdot { 50% { opacity: .35; } } }
   .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #fff; }
 </style>
 <script src="config.js"></script>
@@ -295,6 +300,11 @@
   </main>
 </div>
 
+<a class="jarvis-fab hidden" id="jarvisFab" href="https://t.me/DailyLaurenz_bot" target="_blank" rel="noopener" aria-label="Praat met Jarvis in Telegram">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/><circle class="dot" cx="19" cy="5" r="2" fill="currentColor" stroke="none"/></svg>
+  Jarvis
+</a>
+
 <div class="actionbar hidden" id="actionbar">
   <div class="in">
     <div id="selInfo"></div>
@@ -322,6 +332,8 @@
   // lezen: drive.readonly; opdrachten schrijven: drive.file (enkel bestanden die dit dashboard zelf maakt)
   const SCOPE = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file';
   const CMD_FOLDER = 'Dashboard-opdrachten';
+  const JARVIS_URL = CFG.jarvisUrl || 'https://t.me/DailyLaurenz_bot';
+  const openJarvis = () => window.open(JARVIS_URL, '_blank', 'noopener');
   const HALF_YEAR = 182.5 * 864e5;
   let token = null, tokenExp = 0, tokenClient = null, timer = null, lastData = null, fileId = CFG.fileId;
   let view = 'brein', filter = 'voorstel';
@@ -348,6 +360,7 @@
     flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
     check: '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>',
     cake: '<path d="M4 21h16M5 21v-7a2 2 0 012-2h10a2 2 0 012 2v7"/><path d="M5 16c2 1.5 4 1.5 7 0s5-1.5 7 0M12 12V9M12 6.5c-.8-.8-.8-2 0-3 .8 1 .8 2.2 0 3z"/>'
   };
   const iconSvg = (k, size = 16) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>`;
@@ -402,6 +415,7 @@
         $('login').classList.add('hidden');
         $('app').classList.remove('hidden');
         $('logout').classList.remove('hidden');
+        $('jarvisFab').href = JARVIS_URL; $('jarvisFab').classList.remove('hidden');
         load();
         schedule();
       }
@@ -425,7 +439,7 @@
 
   function needLogin(msg) {
     token = null; clearInterval(timer);
-    $('app').classList.add('hidden'); $('logout').classList.add('hidden'); $('actionbar').classList.add('hidden');
+    $('app').classList.add('hidden'); $('logout').classList.add('hidden'); $('actionbar').classList.add('hidden'); $('jarvisFab').classList.add('hidden');
     $('login').classList.remove('hidden');
     $('loginBtn').textContent = 'Opnieuw inloggen';
     $('loginMsg').textContent = msg || '';
@@ -654,7 +668,7 @@
     const F = R * 7;                       // perspectief
     const nodes = [], links = [];
     const center = {kind: 'c', p: [0, 0, 0], r: narrow ? 28 : 38, big: true, color: 'var(--accent)',
-      n: {icon: 'me', label: 'Laurenz', value: '', st: 'none', tip: ['Alles op een rij', 'Sleep om te draaien, tik een onderwerp']}};
+      n: {icon: 'mic', label: 'Jarvis', value: 'tik om te praten', st: 'none', tip: ['Jarvis', 'Tik om met Jarvis te praten in Telegram']}};
     nodes.push(center);
     const nT = topics.length;
     topics.forEach((t, ti) => {
@@ -716,7 +730,7 @@
       kick();
     }
     function activate(d) {
-      if (d.kind === 'c') { focusTopic(null); return; }
+      if (d.kind === 'c') { openJarvis(); return; }
       if (S.focus === d.ti) go(d.n); else focusTopic(d.ti);
     }
 
@@ -835,8 +849,8 @@
     draw();
     if (S.vy || S.vp || S.tween) kick();
     box.append(el('div', 'hint', narrow
-      ? 'Sleep om te draaien. Tik een onderwerp om het naar voren te halen, tik nog eens om het te openen. Tik naast de bollen om terug te gaan.'
-      : 'Sleep om het brein te draaien. Klik een onderwerp om het naar voren te halen, klik nog eens om het te openen. Klik naast de bollen om terug te gaan. Een knipperende rand vraagt aandacht.'));
+      ? 'Sleep om te draaien. Tik een onderwerp om het naar voren te halen, tik nog eens om het te openen. Tik naast de bollen om terug te gaan. Tik Jarvis in het midden om met hem te praten.'
+      : 'Sleep om het brein te draaien. Klik een onderwerp om het naar voren te halen, klik nog eens om het te openen. Klik naast de bollen om terug te gaan. Klik Jarvis in het midden om met hem te praten.'));
   }
 
   // ---------- FOREX ----------
@@ -1057,6 +1071,7 @@
   function updateActionBar() {
     const n = selected.size, show = view === 'telenet' && n > 0 && !pending;
     $('actionbar').classList.toggle('hidden', !show);
+    if (token) $('jarvisFab').classList.toggle('hidden', show);
     if (!show) return;
     const h = [...selected.values()].reduce((s, v) => s + v.hours, 0);
     $('selInfo').replaceChildren(el('b', null, `${n} opname(s) geselecteerd`), ` · ${num(h, 1)} u vrij te maken`);
