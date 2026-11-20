@@ -664,8 +664,9 @@
             b ? {icon: 'cake', label: b.name.split(' ')[0], value: b.days === 0 ? 'vandaag!' : b.days === 1 ? 'morgen' : `over ${b.days} d`, st: b.days <= 1 ? 'warn' : 'none', go: 'agenda',
               tip: ['Verjaardag', b.name + (b.age ? ` wordt ${b.age}` : ''), day(b.date)]} : null,
             ml.status === 'ok' ? (() => { const dn = (ml.doccle || []).filter((x) => !x.read).length;
-              return {icon: 'mail', label: 'Mail', value: `${ml.unread} ongelezen`, st: dn ? 'warn' : 'none', go: 'agenda',
-                tip: ['Hotmail', `${ml.unread} ongelezen`, dn ? `${dn} nieuw Doccle-document(en)` : 'geen nieuwe Doccle-documenten']}; })() : null
+              const sec = (ml.counts || {}).beveiliging || 0;
+              return {icon: 'mail', label: 'Mail', value: ml.unread ? `${ml.unread} belangrijk` : 'niets nieuws', st: sec ? 'bad' : dn || ml.unread ? 'warn' : 'none', go: 'agenda',
+                tip: ['Belangrijke mail', ...Object.entries(ml.counts || {}).filter(([, n]) => n).map(([k, n]) => `${n} ${MAILCAT[k] || k}`), dn ? `${dn} nieuw Doccle-document(en)` : 'geen nieuwe Doccle-documenten']}; })() : null
           ].filter(Boolean) : []};
       })()
     ];
@@ -1414,14 +1415,16 @@
   }
 
   // ---------- MAIL & DOCCLE ----------
+  const MAILCAT = {beveiliging: 'beveiliging', factuur: 'factuur', bestelling: 'bestelling', levering: 'levering', doccle: 'Doccle'};
+  const MAILCOL = {beveiliging: 'var(--bad)', factuur: 'var(--c-forex)', bestelling: 'var(--c-telenet)', levering: 'var(--c-sport)', doccle: 'var(--c-agenda)'};
   function mailRow(x, title) {
     const r = el('div', 'ev');
     const d = new Date(x.at);
     r.append(el('div', 'tm', isNaN(d) ? '' : (key(d) === key(new Date()) ? x.at.slice(11, 16) : d.toLocaleDateString('nl-BE', {day: 'numeric', month: 'short'}))));
-    const ti = el('div', 'ti'); ti.style.borderLeftColor = x.read ? 'var(--line)' : 'var(--accent)';
+    const ti = el('div', 'ti'); ti.style.borderLeftColor = MAILCOL[x.cat] || 'var(--accent)'; if (x.read) ti.style.opacity = '.6';
     const t = el('div', null, title || x.subject); if (!x.read) t.style.fontWeight = '600';
     ti.append(t);
-    const meta = [title ? null : x.from, x.attach ? '📎' : null, x.invoice ? 'factuur?' : null].filter(Boolean).join(' · ');
+    const meta = [title ? null : x.from, title ? null : MAILCAT[x.cat], x.attach ? '📎' : null].filter(Boolean).join(' · ');
     if (meta) ti.append(el('div', 'm', meta));
     r.append(ti); return r;
   }
@@ -1433,14 +1436,18 @@
       dc.append(el('div', 'name', 'Doccle'), el('div', 'empty', 'Verschijnt zodra je Hotmail gekoppeld is: het dashboard leest de meldingsmails van Doccle.'));
       return;
     }
-    const top = el('div', 'card-top'); top.append(el('span', 'name', 'Mail'), el('span', 'small muted', 'Hotmail · alleen lezen'));
-    mc.append(top, el('div', 'big', `${ml.unread} ongelezen`));
-    const inv = (ml.invoices || []).filter((x) => !x.read);
-    if (inv.length) mc.append(el('div', 'small warn', `${inv.length} ongelezen mail(s) over een factuur of betaling`));
-    const list = (ml.recent || []).filter((x) => !x.doccle).slice(0, 8);
-    if (!list.length) mc.append(el('div', 'empty', 'Postvak IN is leeg.'));
+    const top = el('div', 'card-top'); top.append(el('span', 'name', 'Belangrijke mail'), el('span', 'small muted', `Hotmail · laatste ${ml.days || 14} dagen`));
+    const cn = ml.counts || {}, nNew = Object.values(cn).reduce((a, b) => a + b, 0);
+    mc.append(top, el('div', 'big', nNew ? `${nNew} nieuw` : 'Niets nieuws'));
+    const chips = el('div', 'chips');
+    Object.keys(MAILCAT).filter((k) => k !== 'doccle').forEach((k) => { const c = el('span', 'chip', `${MAILCAT[k]} ${cn[k] || 0}`); c.style.cursor = 'default'; if (cn[k]) { c.style.borderColor = MAILCOL[k]; c.style.color = 'var(--fg)'; } chips.append(c); });
+    mc.append(chips);
+    if (cn.beveiliging) mc.append(el('div', 'small bad', 'Beveiligingsmail? Klik nooit op links in de mail zelf: ga zelf naar de website of app om te controleren.'));
+    const list = (ml.recent || []).filter((x) => !x.doccle).slice(0, 10);
+    if (!list.length) mc.append(el('div', 'empty', 'Geen facturen, bestellingen, leveringen of beveiligingsmeldingen. Reclame wordt weggefilterd.'));
     list.forEach((x) => mc.append(mailRow(x)));
     if (ml.message) mc.append(el('div', 'small muted', ml.message));
+    if (ml.inbox_unread != null) mc.append(el('div', 'small muted', `Hele postvak IN: ${num(ml.inbox_unread)} ongelezen (vooral reclame, hier verborgen).`));
     const t2 = el('div', 'card-top'); t2.append(el('span', 'name', 'Doccle'), el('span', 'small muted', 'laatste 45 dagen'));
     dc.append(t2);
     const docs = ml.doccle || [];
