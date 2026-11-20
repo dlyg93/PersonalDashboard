@@ -16,7 +16,7 @@
   :root {
     --bg: #04070d; --panel: #0a111d; --panel2: #0e1828; --line: #172437; --fg: #e6f1ff; --muted: #7f93ad;
     --accent: #2f9bff; --glow: #7cc8ff; --good: #22c55e; --bad: #ef4444; --warn: #f59e0b; --bar-bg: #232835; --bar-muted: #3a4152;
-    --c-forex: #eab308; --c-telenet: #a78bfa; --c-sport: #fb6a2c; --c-health: #ec4899; --c-agenda: #38bdf8;
+    --c-forex: #eab308; --c-telenet: #a78bfa; --c-sport: #fb6a2c; --c-health: #ec4899; --c-agenda: #38bdf8; --c-car: #34d399;
     --radius: 12px;
   }
   * { box-sizing: border-box; }
@@ -180,6 +180,7 @@
       <a href="#sport" data-v="sport" data-icon="run">Sport</a>
       <a href="#gezondheid" data-v="gezondheid" data-icon="heart">Gezondheid</a>
       <a href="#agenda" data-v="agenda" data-icon="cal">Agenda</a>
+      <a href="#auto" data-v="auto" data-icon="car">Auto</a>
     </nav>
     <p class="lede" id="lede"></p>
     <div id="alert" class="alert hidden" role="status"></div>
@@ -303,6 +304,21 @@
         <div class="card" id="aDoccle"></div>
       </div>
     </section>
+    <!-- AUTO -->
+    <section data-view="auto" class="hidden">
+      <h2 id="cTitle">Auto</h2>
+      <p class="sub" id="cSub">Uit BMW CarData, via de Mac mini. Alleen lezen.</p>
+      <div class="grid">
+        <div class="card" id="cBat"></div>
+        <div class="card" id="cCharge"></div>
+        <div class="card" id="cInfo"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="name">Batterij, laatste dagen</div>
+        <div class="small muted">Elke stip is een update van je wagen</div>
+        <div class="chart" id="cChart"></div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -369,6 +385,8 @@
     flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
     check: '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    car: '<path d="M5 16l1.5-5a2 2 0 012-1.4h7a2 2 0 012 1.4L19 16"/><rect x="3" y="16" width="18" height="4" rx="1.5"/><circle cx="7.5" cy="20" r="1.5"/><circle cx="16.5" cy="20" r="1.5"/>',
+    bolt: '<path d="M13 2L5 14h6l-1 8 8-12h-6z"/>',
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
     doc: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
     mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>',
@@ -497,7 +515,7 @@
 
   // ---------- weergaven ----------
   function setView(v) {
-    view = ['brein', 'forex', 'telenet', 'sport', 'gezondheid', 'agenda'].includes(v) ? v : 'brein';
+    view = ['brein', 'forex', 'telenet', 'sport', 'gezondheid', 'agenda', 'auto'].includes(v) ? v : 'brein';
     document.querySelectorAll('[data-view]').forEach((s) => s.classList.toggle('hidden', s.dataset.view !== view));
     document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('on', a.dataset.v === view));
     $('lede').classList.toggle('hidden', view !== 'brein');
@@ -569,17 +587,18 @@
     parts.forEach((p, i) => { if (i) lede.append(i === parts.length - 1 ? ' en ' : ', '); lede.append(...p); });
     if (parts.length) lede.append('.');
 
-    if (view === 'brein' && !(window.__brain3d && window.__brain3d.busy)) renderBrain(accounts, t, lib, strava, acts, wk, d.marathon || {}, d.whoop || {}, d.agenda || {}, d.mail || {});
+    if (view === 'brein' && !(window.__brain3d && window.__brain3d.busy)) renderBrain(accounts, t, lib, strava, acts, wk, d.marathon || {}, d.whoop || {}, d.agenda || {}, d.mail || {}, d.car || {});
     else if (window.__brainAnim) { cancelAnimationFrame(window.__brainAnim); window.__brainAnim = null; }
     if (view === 'forex') { renderAccounts(accounts); renderPositions(accounts); renderTrades(accounts); }
     if (view === 'telenet') renderTelenetView(t, lib, d.actions || []);
     if (view === 'sport') { renderMarathon(d.marathon || {}); renderStrava(strava, acts, wk); }
     if (view === 'gezondheid') renderHealth(d.whoop || {});
     if (view === 'agenda') { renderAgenda(d.agenda || {}); renderMail(d.mail || {}); }
+    if (view === 'auto') renderCar(d.car || {});
   }
 
   // ---------- BREIN ----------
-  function renderBrain(accounts, t, lib, strava, acts, wk, mar, wh, ag, ml) {
+  function renderBrain(accounts, t, lib, strava, acts, wk, mar, wh, ag, ml, car) {
     const box = $('brain'); box.replaceChildren();
     const W = box.clientWidth || 360, narrow = W < 560;
 
@@ -668,6 +687,20 @@
               return {icon: 'mail', label: 'Mail', value: ml.unread ? `${ml.unread} belangrijk` : 'niets nieuws', st: sec ? 'bad' : dn || ml.unread ? 'warn' : 'none', go: 'agenda',
                 tip: ['Belangrijke mail', ...Object.entries(ml.counts || {}).filter(([, n]) => n).map(([k, n]) => `${n} ${MAILCAT[k] || k}`), dn ? `${dn} nieuw Doccle-document(en)` : 'geen nieuwe Doccle-documenten']}; })() : null
           ].filter(Boolean) : []};
+      })(),
+      (() => {
+        const okc = car.status === 'ok';
+        const sc = okc ? car.soc : null;
+        return {key: 'auto', icon: 'car', label: 'Auto', color: 'var(--c-car)',
+          value: okc && sc != null ? `${num(sc)}%${car.charging ? ' ⚡' : ''}` : (car.status === 'waiting' ? 'wacht…' : '—'),
+          st: !okc || sc == null ? 'none' : sc < 20 ? 'bad' : sc < 35 && !car.plugged ? 'warn' : 'ok',
+          tip: ['BMW i5', okc ? `${num(sc)}% · ${num(car.range_km)} km` : (car.message || 'nog niet gekoppeld')],
+          kids: okc ? [
+            {icon: 'bolt', label: car.charging ? 'Laadt' : car.plugged ? 'Aan de lader' : 'Niet aan lader', value: car.charging && car.time_to_full_min ? `vol over ${hmin(car.time_to_full_min)}` : (car.target_soc ? `doel ${num(car.target_soc)}%` : ''),
+              st: car.charging ? 'ok' : 'none', go: 'auto', tip: ['Laden', car.charging ? `${car.power_kw ? num(car.power_kw, 1) + ' kW · ' : ''}vol over ${hmin(car.time_to_full_min)}` : (car.plugged ? 'stekker zit erin' : 'niet aangesloten')]},
+            {icon: 'flag', label: 'Bereik', value: car.range_km != null ? num(car.range_km) + ' km' : '—', st: 'none', go: 'auto', tip: ['Actieradius', num(car.range_km) + ' km']},
+            {icon: 'clock', label: 'Km-stand', value: car.odometer_km != null ? num(car.odometer_km) + ' km' : '—', st: 'none', go: 'auto', tip: ['Kilometerstand', num(car.odometer_km) + ' km']}
+          ] : []};
       })()
     ];
 
@@ -1456,6 +1489,60 @@
     dc.append(el('div', 'small muted', 'Uit de meldingsmails van Doccle. Het document zelf open je in de Doccle-app.'));
     if (!docs.length) dc.append(el('div', 'empty', 'Geen Doccle-meldingen gevonden.'));
     docs.slice(0, 8).forEach((x) => dc.append(mailRow(x, x.doccle_sender || x.subject)));
+  }
+
+  // ---------- AUTO ----------
+  const hmin = (m) => m == null ? '—' : (m >= 60 ? `${Math.floor(m / 60)}u${String(Math.round(m % 60)).padStart(2, '0')}` : `${Math.round(m)} min`);
+  function renderCar(c) {
+    const bc = $('cBat'), cc = $('cCharge'), ic = $('cInfo');
+    [bc, cc, ic].forEach((x) => x.replaceChildren());
+    $('cChart').replaceChildren();
+    if (c.status !== 'ok') {
+      bc.append(el('div', 'name', 'BMW'), el('div', 'empty', c.message || 'Nog niet gekoppeld. Start bmw_koppelen.bat op de Mac mini.'));
+      return;
+    }
+    $('cTitle').textContent = c.name || 'Auto';
+    $('cSub').textContent = 'Uit BMW CarData, via de Mac mini. Alleen lezen.' + (c.data_at ? ' Laatste gegevens van je wagen: ' + when(c.data_at) : '');
+    // batterij
+    bc.append(el('div', 'small muted', 'Batterij'));
+    const big = el('div', 'ring-big', c.soc != null ? num(c.soc) + '%' : '—');
+    big.style.color = c.soc == null ? 'var(--muted)' : c.soc < 20 ? 'var(--bad)' : c.soc < 35 ? 'var(--warn)' : 'var(--c-car)';
+    bc.append(big);
+    const bar = el('div', 'bar'), f = el('span'); f.style.width = Math.max(0, Math.min(100, c.soc || 0)) + '%'; f.style.background = big.style.color; bar.append(f);
+    if (c.target_soc) { const tg = el('span'); tg.style.cssText = `left:${c.target_soc}%;width:2px;background:var(--fg);opacity:.7`; bar.append(tg); }
+    bc.append(bar);
+    const dl = el('dl', 'kv');
+    [['Actieradius', c.range_km != null ? num(c.range_km) + ' km' : '—'], ['Laaddoel', c.target_soc ? num(c.target_soc) + '%' : '—'],
+     ['Batterij', c.battery_kwh ? num(c.battery_kwh, 1) + ' kWh' : '—']].forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, v)));
+    bc.append(dl);
+    // laden
+    cc.append(el('div', 'small muted', 'Laden'));
+    cc.append(el('div', 'big', c.charging ? '⚡ Laadt' : c.plugged ? 'Aan de lader' : 'Niet aangesloten'));
+    const dl2 = el('dl', 'kv');
+    [['Vermogen', c.charging && c.power_kw ? num(c.power_kw, 1) + ' kW' : '—'], ['Vol over', c.charging ? hmin(c.time_to_full_min) : '—'],
+     ['Status', c.charging_status || '—']].forEach(([k, v]) => dl2.append(el('dt', null, k), el('dd', null, v)));
+    cc.append(dl2);
+    // info
+    ic.append(el('div', 'small muted', 'Kilometerstand'), el('div', 'big', c.odometer_km != null ? num(c.odometer_km) + ' km' : '—'));
+    const dl3 = el('dl', 'kv');
+    const tp = (c.tyres_kpa || []).map((x) => x == null ? '—' : num(x / 100, 1)).join(' · ');
+    [['Bandenspanning (bar)', (c.tyres_kpa || []).some((x) => x != null) ? tp : '—'], ['Verbruik', c.consumption != null ? String(c.consumption) : '—'],
+     ['Gegevens', `${c.keys || 0} waarden`]].forEach(([k, v]) => dl3.append(el('dt', null, k), el('dd', null, v)));
+    ic.append(dl3);
+    if (c.location) { const a = el('a', 'small', 'Toon op kaart'); a.href = `https://www.google.com/maps?q=${c.location.lat},${c.location.lon}`; a.target = '_blank'; a.rel = 'noopener'; a.style.color = 'var(--accent)'; ic.append(a); }
+    // grafiek
+    const hist = (c.history || []).filter((h) => h.soc != null).map((h) => ({t: new Date(h.t), v: h.soc}));
+    const box = $('cChart');
+    if (hist.length < 2 || !window.d3) { box.append(el('div', 'empty', 'Het verloop verschijnt zodra je wagen een paar keer gegevens doorstuurde.')); return; }
+    const W2 = box.clientWidth || 600, H = 170, mg = {t: 12, r: 12, b: 24, l: 34};
+    const x = d3.scaleTime().domain(d3.extent(hist, (p) => p.t)).range([mg.l, W2 - mg.r]);
+    const y = d3.scaleLinear().domain([0, 100]).range([H - mg.b, mg.t]);
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W2} ${H}`).attr('role', 'img').attr('aria-label', 'Batterijverloop');
+    [0, 50, 100].forEach((v) => { svg.append('line').attr('x1', mg.l).attr('x2', W2 - mg.r).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', 'var(--line)');
+      svg.append('text').attr('x', mg.l - 4).attr('y', y(v) + 3).attr('text-anchor', 'end').text(v + '%'); });
+    svg.append('path').datum(hist).attr('fill', 'none').attr('stroke', 'var(--c-car)').attr('stroke-width', 1.8).attr('d', d3.line().x((p) => x(p.t)).y((p) => y(p.v)));
+    svg.selectAll('circle').data(hist).join('circle').attr('r', 2.5).attr('cx', (p) => x(p.t)).attr('cy', (p) => y(p.v)).attr('fill', 'var(--c-car)');
+    x.ticks(5).forEach((tk) => svg.append('text').attr('x', x(tk)).attr('y', H - 8).attr('text-anchor', 'middle').text(tk.toLocaleDateString('nl-BE', {day: 'numeric', month: 'short'})));
   }
 
   // ---------- SPORT ----------
