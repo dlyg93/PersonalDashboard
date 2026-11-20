@@ -16,7 +16,7 @@
   :root {
     --bg: #04070d; --panel: #0a111d; --panel2: #0e1828; --line: #172437; --fg: #e6f1ff; --muted: #7f93ad;
     --accent: #2f9bff; --glow: #7cc8ff; --good: #22c55e; --bad: #ef4444; --warn: #f59e0b; --bar-bg: #232835; --bar-muted: #3a4152;
-    --c-forex: #eab308; --c-telenet: #a78bfa; --c-sport: #fb6a2c; --c-health: #ec4899; --c-agenda: #38bdf8; --c-car: #2d7be0; --c-car2: #7fd0ff;
+    --c-forex: #eab308; --c-telenet: #a78bfa; --c-sport: #fb6a2c; --c-health: #ec4899; --c-agenda: #38bdf8; --c-car: #2d7be0; --c-car2: #7fd0ff; --c-home: #34d399;
     --radius: 12px;
   }
   * { box-sizing: border-box; }
@@ -93,6 +93,7 @@
   nav.tabs a[data-v=gezondheid], section[data-view=gezondheid] { --tc: var(--c-health); --sec: var(--c-health); }
   nav.tabs a[data-v=agenda], section[data-view=agenda] { --tc: var(--c-agenda); --sec: var(--c-agenda); }
   nav.tabs a[data-v=auto], section[data-view=auto] { --tc: var(--c-car2); --sec: var(--c-car); }
+  nav.tabs a[data-v=thuis], section[data-view=thuis] { --tc: var(--c-home); --sec: var(--c-home); }
   /* elke tab zijn eigen kleur: titel met lichtstreep, kaarten met een gekleurde bovenrand */
   section[data-view] h2 { display: flex; align-items: center; gap: 10px; font-size: 19px; letter-spacing: .01em; }
   section[data-view] h2::before { content: ''; width: 4px; height: 20px; border-radius: 2px; background: var(--sec, var(--accent)); box-shadow: 0 0 12px var(--sec, var(--accent)); }
@@ -205,8 +206,38 @@
     .car-img { order: -1; min-height: 140px; }
     .car-stats { grid-template-columns: 1fr 1fr; }
   }
+  /* thuis */
+  .home-alert { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 12px; padding: 12px 16px; border-radius: 12px;
+    border: 1px solid rgba(245,158,11,.6); background: linear-gradient(135deg, rgba(245,158,11,.18), rgba(245,158,11,.05)); box-shadow: 0 0 24px rgba(245,158,11,.15); }
+  .home-alert .ico { font-size: 22px; }
+  .home-alert .txt { flex: 1 1 260px; }
+  .home-alert .btn { background: var(--warn); color: #1a1205; }
+  .lights { margin-top: 8px; }
+  .lt { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line); }
+  .lt .bulb { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #142033; color: var(--muted); flex: none; transition: all .2s; }
+  .lt.on .bulb { background: rgba(250,204,21,.18); color: #facc15; box-shadow: 0 0 16px rgba(250,204,21,.45); }
+  .lt .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lt .nm small { display: block; color: var(--muted); font-size: 11px; }
+  .sw { position: relative; width: 46px; height: 26px; border-radius: 13px; border: 1px solid var(--line); background: #1a2638; cursor: pointer; flex: none; transition: background .2s; padding: 0; }
+  .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #9fb3cc; transition: transform .2s, background .2s; }
+  .sw[aria-checked=true] { background: rgba(52,211,153,.35); border-color: var(--c-home); }
+  .sw[aria-checked=true]::after { transform: translateX(20px); background: #fff; }
+  .sw.busy { opacity: .55; cursor: progress; }
+  .sw:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  .presence { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+  .presence .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--good); box-shadow: 0 0 12px var(--good); }
+  .presence .dot.away { background: var(--c-agenda); box-shadow: 0 0 12px var(--c-agenda); }
+  #hMap { height: 360px; border-radius: 10px; margin-top: 10px; background: #0a1220; z-index: 0; }
+  .leaflet-container { font: inherit; }
+  .pin { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; border: 2px solid #fff; box-shadow: 0 4px 14px rgba(0,0,0,.5); }
+  .pin svg { width: 18px; height: 18px; }
+  .pin.me { background: #0ea5e9; } .pin.car { background: #2d7be0; } .pin.home { background: #059669; width: 28px; height: 28px; }
+  .map-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+  .map-legend b { color: var(--fg); font-weight: 600; }
   .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #fff; }
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="config.js"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
@@ -237,9 +268,11 @@
       <a href="#gezondheid" data-v="gezondheid" data-icon="heart">Gezondheid</a>
       <a href="#agenda" data-v="agenda" data-icon="cal">Agenda</a>
       <a href="#auto" data-v="auto" data-icon="car">Auto</a>
+      <a href="#thuis" data-v="thuis" data-icon="home">Thuis</a>
     </nav>
     <p class="lede" id="lede"></p>
     <div id="alert" class="alert hidden" role="status"></div>
+    <div id="homeAlert" class="home-alert hidden" role="alert"></div>
 
     <!-- BREIN -->
     <section data-view="brein">
@@ -360,6 +393,27 @@
         <div class="card" id="aDoccle"></div>
       </div>
     </section>
+    <!-- THUIS -->
+    <section data-view="thuis" class="hidden">
+      <h2>Thuis</h2>
+      <p class="sub" id="tSub">Uit Home Assistant, via de Mac mini.</p>
+      <div class="grid">
+        <div class="card" id="tMe"></div>
+        <div class="card" id="tPower"></div>
+        <div class="card" id="tLights"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="card-top"><span class="name">Waar zijn jij en je auto?</span><span class="small muted" id="tMapInfo"></span></div>
+        <div id="hMap"></div>
+        <div class="map-legend" id="tLegend"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="name">Stroomverbruik, laatste 24 uur</div>
+        <div class="small muted">Uit je HomeWizard P1-meter. Onder nul = teruglevering.</div>
+        <div class="chart" id="tChart"></div>
+      </div>
+    </section>
+
     <!-- AUTO -->
     <section data-view="auto" class="hidden">
       <h2 id="cTitle">Auto</h2>
@@ -446,6 +500,9 @@
     bolt: '<path d="M13 2L5 14h6l-1 8 8-12h-6z"/>',
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
     doc: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
+    home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+    bulb: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0012 3z"/>',
+    plug: '<path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 01-12 0zM12 17v5"/>',
     mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>',
     cake: '<path d="M4 21h16M5 21v-7a2 2 0 012-2h10a2 2 0 012 2v7"/><path d="M5 16c2 1.5 4 1.5 7 0s5-1.5 7 0M12 12V9M12 6.5c-.8-.8-.8-2 0-3 .8 1 .8 2.2 0 3z"/>'
   };
@@ -572,7 +629,7 @@
 
   // ---------- weergaven ----------
   function setView(v) {
-    view = ['brein', 'forex', 'telenet', 'sport', 'gezondheid', 'agenda', 'auto'].includes(v) ? v : 'brein';
+    view = ['brein', 'forex', 'telenet', 'sport', 'gezondheid', 'agenda', 'auto', 'thuis'].includes(v) ? v : 'brein';
     document.querySelectorAll('[data-view]').forEach((s) => s.classList.toggle('hidden', s.dataset.view !== view));
     document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('on', a.dataset.v === view));
     $('lede').classList.toggle('hidden', view !== 'brein');
@@ -644,7 +701,7 @@
     parts.forEach((p, i) => { if (i) lede.append(i === parts.length - 1 ? ' en ' : ', '); lede.append(...p); });
     if (parts.length) lede.append('.');
 
-    if (view === 'brein' && !(window.__brain3d && window.__brain3d.busy)) renderBrain(accounts, t, lib, strava, acts, wk, d.marathon || {}, d.whoop || {}, d.agenda || {}, d.mail || {}, d.car || {});
+    if (view === 'brein' && !(window.__brain3d && window.__brain3d.busy)) renderBrain(accounts, t, lib, strava, acts, wk, d.marathon || {}, d.whoop || {}, d.agenda || {}, d.mail || {}, d.car || {}, d.home || {});
     else if (window.__brainAnim) { cancelAnimationFrame(window.__brainAnim); window.__brainAnim = null; }
     if (view === 'forex') { renderAccounts(accounts); renderPositions(accounts); renderTrades(accounts); }
     if (view === 'telenet') renderTelenetView(t, lib, d.actions || []);
@@ -652,10 +709,12 @@
     if (view === 'gezondheid') renderHealth(d.whoop || {});
     if (view === 'agenda') { renderAgenda(d.agenda || {}); renderMail(d.mail || {}); }
     if (view === 'auto') renderCar(d.car || {});
+    if (view === 'thuis') renderHome(d.home || {}, d.car || {});
+    renderHomeAlert(d.home || {});
   }
 
   // ---------- BREIN ----------
-  function renderBrain(accounts, t, lib, strava, acts, wk, mar, wh, ag, ml, car) {
+  function renderBrain(accounts, t, lib, strava, acts, wk, mar, wh, ag, ml, car, hm) {
     const box = $('brain'); box.replaceChildren();
     const W = box.clientWidth || 360, narrow = W < 560;
 
@@ -757,6 +816,20 @@
               st: car.charging ? 'ok' : 'none', go: 'auto', tip: ['Laden', car.charging ? `${car.power_kw ? num(car.power_kw, 1) + ' kW · ' : ''}vol over ${hmin(car.time_to_full_min)}` : (car.plugged ? 'stekker zit erin' : 'niet aangesloten')]},
             {icon: 'flag', label: 'Bereik', value: car.range_km != null ? num(car.range_km) + ' km' : '—', st: 'none', go: 'auto', tip: ['Actieradius', num(car.range_km) + ' km']},
             {icon: 'clock', label: 'Km-stand', value: car.odometer_km != null ? num(car.odometer_km) + ' km' : '—', st: 'none', go: 'auto', tip: ['Kilometerstand', num(car.odometer_km) + ' km']}
+          ] : []};
+      })(),
+      (() => {
+        const okh = hm.status === 'ok', me = (okh && hm.me) || {}, en = (okh && hm.energy) || {};
+        return {key: 'thuis', icon: 'home', label: 'Thuis', color: 'var(--c-home)',
+          value: okh ? (hm.lights_on ? `${hm.lights_on} licht${hm.lights_on === 1 ? '' : 'en'} aan` : 'alles uit') : '—',
+          st: !okh ? 'none' : hm.alert ? 'warn' : 'ok',
+          tip: ['Thuis', okh ? (hm.alert ? hm.alert.text : `${me.home ? 'Je bent thuis' : 'Je bent niet thuis'} · ${hm.lights_on} licht(en) aan`) : (hm.message || 'nog niet gekoppeld')],
+          kids: okh ? [
+            {icon: 'bulb', label: 'Lichten', value: hm.lights_on ? hm.lights_on + ' aan' : 'alles uit', st: hm.alert ? 'warn' : 'none', go: 'thuis',
+              tip: ['Lichten aan', ...((hm.lights || []).filter((l) => l.on).slice(0, 6).map((l) => l.name)), hm.lights_on ? '' : 'geen'].filter(Boolean)},
+            {icon: 'me', label: me.home ? 'Thuis' : 'Onderweg', value: me.zone && !me.home && me.zone !== 'onderweg' ? me.zone : '', st: 'none', go: 'thuis', tip: ['Aanwezigheid', me.home ? 'Je bent thuis' : 'Je bent niet thuis']},
+            {icon: 'plug', label: 'Stroom', value: en.power_w != null ? num(en.power_w) + ' W' : '—', st: 'none', go: 'thuis',
+              tip: ['Stroom', `nu ${num(en.power_w)} W`, en.import_today_kwh != null ? `vandaag ${num(en.import_today_kwh, 1)} kWh afgenomen` : '']}
           ] : []};
       })()
     ];
@@ -1546,6 +1619,159 @@
     dc.append(el('div', 'small muted', 'Uit de meldingsmails van Doccle. Het document zelf open je in de Doccle-app.'));
     if (!docs.length) dc.append(el('div', 'empty', 'Geen Doccle-meldingen gevonden.'));
     docs.slice(0, 8).forEach((x) => dc.append(mailRow(x, x.doccle_sender || x.subject)));
+  }
+
+  // ---------- THUIS ----------
+  const haPending = new Map();   // entity_id -> {on, at}
+  function lightState(l) {
+    const p = haPending.get(l.id);
+    if (p && (p.on === l.on || Date.now() - p.at > 4 * 60000)) { haPending.delete(l.id); return {on: l.on, busy: false}; }
+    return p ? {on: p.on, busy: true} : {on: l.on, busy: false};
+  }
+  async function switchLight(ids, on) {
+    ids = ids.filter((id) => !haPending.has(id));
+    if (!ids.length) return;
+    ids.forEach((id) => haPending.set(id, {on, at: Date.now()}));
+    if (lastData) render(lastData);
+    try {
+      for (const id of ids) {
+        const cid = 'cmd-' + new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 7);
+        await sendCommand(cid, {id: cid, action: 'ha_switch', confirmed: true, created_at: new Date().toISOString(), entity_id: id, on, source: location.href});
+      }
+      // even vaker verversen tot de Mac mini het uitgevoerd heeft
+      clearInterval(timer); timer = setInterval(() => { if (!document.hidden) load(); }, 15000);
+      setTimeout(schedule, 5 * 60000);
+    } catch (e) {
+      ids.forEach((id) => haPending.delete(id));
+      showAlert('Licht schakelen mislukt: ' + e.message, true);
+      if (lastData) render(lastData);
+    }
+  }
+  function renderHomeAlert(hm) {
+    const box = $('homeAlert'); box.replaceChildren();
+    const a = hm.status === 'ok' && hm.alert;
+    const ids = a ? a.ids.filter((id) => { const l = (hm.lights || []).find((x) => x.id === id); return l && lightState(l).on; }) : [];
+    box.classList.toggle('hidden', !ids.length);
+    if (!ids.length) return;
+    const txt = el('div', 'txt'); txt.append(el('b', null, 'Niet thuis, licht aan. '), a.text.replace(/^Je bent niet thuis, maar er /, 'Er '));
+    const b1 = el('button', 'btn small', 'Alles uitzetten'); b1.type = 'button'; b1.onclick = () => switchLight(ids, false);
+    box.append(el('span', 'ico', '💡'), txt, b1);
+    if (view !== 'thuis') { const b2 = el('button', 'btn ghost small', 'Bekijk'); b2.type = 'button'; b2.onclick = () => { location.hash = 'thuis'; }; box.append(b2); }
+  }
+  const dist = (a, b) => { const R = 6371, r = Math.PI / 180, dl = (b.lat - a.lat) * r, dn = (b.lon - a.lon) * r;
+    const h = Math.sin(dl / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+  const km = (d) => d < 1 ? Math.round(d * 1000) + ' m' : num(d, d < 10 ? 1 : 0) + ' km';
+  let hMap = null, hLayer = null, hFitted = false;
+  function renderMap(hm, car) {
+    const me = (hm.status === 'ok' && hm.me && hm.me.lat) ? hm.me : null;
+    const cl = car.status === 'ok' && car.location ? car.location : null;
+    const home = hm.status === 'ok' ? hm.home : null;
+    const leg = $('tLegend'); leg.replaceChildren();
+    if (!window.L) { $('hMap').textContent = 'Kaart kon niet laden.'; return; }
+    if (!hMap) {
+      hMap = L.map('hMap', {zoomControl: true, attributionControl: true}).setView([50.85, 2.885], 12);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom: 19, subdomains: 'abcd',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'}).addTo(hMap);
+      hLayer = L.layerGroup().addTo(hMap);
+    }
+    setTimeout(() => hMap.invalidateSize(), 50);
+    hLayer.clearLayers();
+    const pin = (cls, icon, size = 34) => L.divIcon({className: '', html: `<div class="pin ${cls}">${iconSvg(icon, 18)}</div>`, iconSize: [size, size], iconAnchor: [size / 2, size / 2]});
+    const pts = [];
+    if (home) L.marker([home.lat, home.lon], {icon: pin('home', 'home', 28), title: 'Thuis'}).addTo(hLayer).bindTooltip('Thuis');
+    if (cl) { pts.push([cl.lat, cl.lon]); L.marker([cl.lat, cl.lon], {icon: pin('car', 'car'), title: 'Je auto'}).addTo(hLayer).bindTooltip('Je BMW' + (cl.at ? ' · ' + when(cl.at) : '')); }
+    if (me) {
+      pts.push([me.lat, me.lon]);
+      if (me.accuracy_m && me.accuracy_m > 30) L.circle([me.lat, me.lon], {radius: me.accuracy_m, color: '#0ea5e9', weight: 1, fillOpacity: .08}).addTo(hLayer);
+      L.marker([me.lat, me.lon], {icon: pin('me', 'me'), title: 'Jij'}).addTo(hLayer).bindTooltip('Jij' + (hm.measured_at ? ' · ' + when(hm.measured_at) : ''));
+    }
+    if (!hFitted && (pts.length || home)) {
+      const all = pts.concat(home ? [[home.lat, home.lon]] : []);
+      if (all.length === 1) hMap.setView(all[0], 15); else hMap.fitBounds(all, {padding: [40, 40], maxZoom: 16});
+      hFitted = true;
+    }
+    $('tMapInfo').textContent = cl && cl.at ? 'auto: ' + when(cl.at) : '';
+    const item = (label, val) => { const d = el('span'); d.append(el('b', null, label + ': '), val); leg.append(d); };
+    item('Jij', me ? (hm.me.home ? 'thuis' : home ? km(dist(me, home)) + ' van thuis' : 'onderweg')
+      : (hm.status === 'ok' ? 'geen locatie (Home Assistant-app op je iPhone, locatie "Altijd")' : '—'));
+    item('Je auto', cl ? (home ? (dist(cl, home) < 0.15 ? 'thuis' : km(dist(cl, home)) + ' van thuis') : 'op de kaart') + (me ? ' · ' + km(dist(cl, me)) + ' van jou' : '')
+      : (car.status === 'ok' ? 'nog geen locatie van BMW (komt bij de volgende opvraging)' : '—'));
+    const fit = el('button', 'btn ghost small', 'Centreer'); fit.type = 'button';
+    fit.onclick = () => { hFitted = false; renderMap(hm, car); };
+    leg.append(fit);
+  }
+  function renderHome(hm, car) {
+    const mc = $('tMe'), pc = $('tPower'), lc = $('tLights');
+    [mc, pc, lc].forEach((x) => x.replaceChildren());
+    $('tChart').replaceChildren();
+    renderMap(hm, car);
+    if (hm.status !== 'ok') {
+      mc.append(el('div', 'name', 'Home Assistant'), el('div', 'empty', hm.message || 'Nog niet gekoppeld. Start ha_koppelen.bat op de Mac mini.'));
+      return;
+    }
+    $('tSub').textContent = 'Uit Home Assistant, via de Mac mini' + (hm.measured_at ? ' · gemeten ' + when(hm.measured_at) : '') + '.';
+    // aanwezigheid
+    const me = hm.me || {};
+    mc.append(el('div', 'small muted', 'Aanwezigheid'));
+    const pr = el('div', 'presence');
+    pr.append(el('span', 'dot' + (me.home ? '' : ' away')), el('div', 'big', me.state == null ? '—' : me.home ? 'Thuis' : (me.zone === 'onderweg' ? 'Niet thuis' : me.zone)));
+    mc.append(pr);
+    if (me.since) mc.append(el('div', 'small muted', 'sinds ' + when(me.since)));
+    mc.append(el('div', 'small muted', 'Via de Home Assistant-app op je iPhone.'));
+    // energie
+    const e = hm.energy || {};
+    pc.append(el('div', 'small muted', 'Stroom nu'));
+    const pw = el('div', 'big', e.power_w == null ? '—' : (e.power_w < 0 ? '−' + num(-e.power_w) + ' W' : num(e.power_w) + ' W'));
+    if (e.power_w < 0) pw.classList.add('good');
+    pc.append(pw, el('div', 'small muted', e.power_w == null ? '' : e.power_w < 0 ? 'je levert terug aan het net' : 'je neemt af van het net'));
+    const dl = el('dl', 'kv');
+    [['Afgenomen vandaag', e.import_today_kwh != null ? num(e.import_today_kwh, 1) + ' kWh' : '—'], ['Teruggeleverd vandaag', e.export_today_kwh != null ? num(e.export_today_kwh, 1) + ' kWh' : '—'],
+     ['Gas vandaag', e.gas_today_m3 != null ? num(e.gas_today_m3, 2) + ' m³' : '—']].forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, v)));
+    pc.append(dl);
+    if (!(e.sensors || []).length) pc.append(el('div', 'small warn', 'Geen HomeWizard-sensoren gevonden in Home Assistant.'));
+    // lichten
+    const lights = hm.lights || [];
+    const st = lights.map((l) => ({...l, ...lightState(l)}));
+    const nOn = st.filter((l) => l.on).length;
+    const top = el('div', 'card-top'); top.append(el('span', 'name', 'Lichten'), el('span', 'small muted', `${nOn} van ${lights.length} aan`));
+    lc.append(top);
+    if (nOn) {
+      const off = el('button', 'btn ghost small', 'Alles uit'); off.type = 'button'; off.style.marginTop = '6px';
+      off.onclick = () => switchLight(st.filter((l) => l.on && !l.busy).map((l) => l.id), false); lc.append(off);
+    }
+    const list = el('div', 'lights');
+    if (!lights.length) list.append(el('div', 'empty', 'Geen lichten gevonden.'));
+    st.forEach((l) => {
+      const r = el('div', 'lt' + (l.on ? ' on' : ''));
+      const b = el('span', 'bulb'); b.innerHTML = iconSvg(l.kind === 'switch' ? 'plug' : 'bulb', 16);
+      const nm = el('div', 'nm', l.name); if (l.busy) nm.append(el('small', null, l.on ? 'gaat aan…' : 'gaat uit…'));
+      const sw = el('button', 'sw' + (l.busy ? ' busy' : '')); sw.type = 'button'; sw.setAttribute('role', 'switch'); sw.setAttribute('aria-checked', String(l.on));
+      sw.setAttribute('aria-label', l.name + (l.on ? ' uitzetten' : ' aanzetten')); sw.disabled = l.busy;
+      sw.onclick = () => switchLight([l.id], !l.on);
+      r.append(b, nm, sw); list.append(r);
+    });
+    lc.append(list, el('div', 'small muted', 'Schakelen gaat via de Mac mini: reken op ±1 minuut. Sneller: vraag het aan Jarvis.'));
+    // grafiek
+    const ser = (e.series || []).map(([t, w]) => ({t: new Date(t), v: w}));
+    const box = $('tChart');
+    if (ser.length < 2 || !window.d3) { box.append(el('div', 'empty', 'Het verloop verschijnt na een paar metingen (elke 5 minuten).')); return; }
+    const W2 = box.clientWidth || 600, H = 170, mg = {t: 12, r: 12, b: 24, l: 52};
+    const x = d3.scaleTime().domain(d3.extent(ser, (p) => p.t)).range([mg.l, W2 - mg.r]);
+    const y = d3.scaleLinear().domain([Math.min(0, d3.min(ser, (p) => p.v)), Math.max(500, d3.max(ser, (p) => p.v))]).nice().range([H - mg.b, mg.t]);
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W2} ${H}`).attr('role', 'img').attr('aria-label', 'Stroomverbruik laatste 24 uur');
+    const gr = svg.append('defs').append('linearGradient').attr('id', 'harea').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 1);
+    gr.append('stop').attr('offset', 0).attr('stop-color', '#34d399').attr('stop-opacity', .4); gr.append('stop').attr('offset', 1).attr('stop-color', '#34d399').attr('stop-opacity', 0);
+    y.ticks(4).forEach((v) => { svg.append('line').attr('x1', mg.l).attr('x2', W2 - mg.r).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', v === 0 ? 'var(--muted)' : 'var(--line)');
+      svg.append('text').attr('x', mg.l - 4).attr('y', y(v) + 3).attr('text-anchor', 'end').text(num(v) + ' W'); });
+    svg.append('path').datum(ser).attr('fill', 'url(#harea)').attr('d', d3.area().x((p) => x(p.t)).y0(y(0)).y1((p) => y(p.v)));
+    svg.append('path').datum(ser).attr('fill', 'none').attr('stroke', 'var(--c-home)').attr('stroke-width', 1.8).attr('d', d3.line().x((p) => x(p.t)).y((p) => y(p.v)));
+    x.ticks(6).forEach((tk) => svg.append('text').attr('x', x(tk)).attr('y', H - 8).attr('text-anchor', 'middle').text(tk.toLocaleTimeString('nl-BE', {hour: '2-digit', minute: '2-digit'})));
+    const tt = tip(box), dotc = svg.append('circle').attr('r', 3.5).attr('fill', 'var(--c-home)').style('display', 'none');
+    svg.on('pointermove', (ev) => {
+      const i = d3.bisector((p) => p.t).center(ser, x.invert(d3.pointer(ev)[0])), p = ser[i];
+      dotc.style('display', null).attr('cx', x(p.t)).attr('cy', y(p.v));
+      tt.show([num(p.v) + ' W', p.t.toLocaleTimeString('nl-BE', {hour: '2-digit', minute: '2-digit'})], x(p.t), y(p.v));
+    }).on('pointerleave', () => { dotc.style('display', 'none'); tt.hide(); });
   }
 
   // ---------- AUTO ----------
