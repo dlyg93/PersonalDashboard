@@ -16,7 +16,7 @@
   :root {
     --bg: #04070d; --panel: #0a111d; --panel2: #0e1828; --line: #172437; --fg: #e6f1ff; --muted: #7f93ad;
     --accent: #2f9bff; --glow: #7cc8ff; --good: #22c55e; --bad: #ef4444; --warn: #f59e0b; --bar-bg: #232835; --bar-muted: #3a4152;
-    --c-forex: #eab308; --c-telenet: #a78bfa; --c-sport: #fb6a2c; --c-health: #ec4899; --c-agenda: #38bdf8; --c-car: #34d399;
+    --c-forex: #eab308; --c-telenet: #a78bfa; --c-sport: #fb6a2c; --c-health: #ec4899; --c-agenda: #38bdf8; --c-car: #2d7be0; --c-car2: #7fd0ff;
     --radius: 12px;
   }
   * { box-sizing: border-box; }
@@ -75,10 +75,30 @@
   .hidden { display: none !important; }
 
   /* navigatie */
-  nav.tabs { display: flex; gap: 6px; margin: 14px 0 4px; overflow-x: auto; padding-bottom: 2px; }
-  nav.tabs a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); text-decoration: none; white-space: nowrap; font-size: 14px; }
-  nav.tabs a svg { width: 16px; height: 16px; }
-  nav.tabs a.on { background: rgba(47,155,255,.12); color: var(--fg); border-color: rgba(124,200,255,.55); box-shadow: 0 0 14px rgba(47,155,255,.25); }
+  nav.tabs { display: flex; gap: 8px; margin: 14px -16px 4px; padding: 10px 16px; overflow-x: auto; position: sticky; top: 0; z-index: 12;
+    background: linear-gradient(180deg, rgba(4,7,13,.92), rgba(4,7,13,.72)); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); scrollbar-width: none; }
+  nav.tabs::-webkit-scrollbar { display: none; }
+  nav.tabs a { --tc: var(--accent); position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 9px 15px 9px 11px; border-radius: 14px;
+    border: 1px solid var(--line); background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.01)); color: var(--muted);
+    text-decoration: none; white-space: nowrap; font-size: 14px; font-weight: 500; transition: color .2s, border-color .2s, box-shadow .2s, background .2s; }
+  nav.tabs a svg { width: 18px; height: 18px; color: var(--tc); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--tc) 55%, transparent)); }
+  nav.tabs a:hover { color: var(--fg); border-color: color-mix(in srgb, var(--tc) 45%, transparent); }
+  nav.tabs a.on { color: #fff; border-color: color-mix(in srgb, var(--tc) 75%, transparent);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--tc) 32%, transparent), color-mix(in srgb, var(--tc) 8%, transparent));
+    box-shadow: 0 0 20px color-mix(in srgb, var(--tc) 38%, transparent), inset 0 1px 0 rgba(255,255,255,.12); }
+  nav.tabs a.on::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--tc); box-shadow: 0 0 10px var(--tc); }
+  nav.tabs a[data-v=forex], section[data-view=forex] { --tc: var(--c-forex); --sec: var(--c-forex); }
+  nav.tabs a[data-v=telenet], section[data-view=telenet] { --tc: var(--c-telenet); --sec: var(--c-telenet); }
+  nav.tabs a[data-v=sport], section[data-view=sport] { --tc: var(--c-sport); --sec: var(--c-sport); }
+  nav.tabs a[data-v=gezondheid], section[data-view=gezondheid] { --tc: var(--c-health); --sec: var(--c-health); }
+  nav.tabs a[data-v=agenda], section[data-view=agenda] { --tc: var(--c-agenda); --sec: var(--c-agenda); }
+  nav.tabs a[data-v=auto], section[data-view=auto] { --tc: var(--c-car2); --sec: var(--c-car); }
+  /* elke tab zijn eigen kleur: titel met lichtstreep, kaarten met een gekleurde bovenrand */
+  section[data-view] h2 { display: flex; align-items: center; gap: 10px; font-size: 19px; letter-spacing: .01em; }
+  section[data-view] h2::before { content: ''; width: 4px; height: 20px; border-radius: 2px; background: var(--sec, var(--accent)); box-shadow: 0 0 12px var(--sec, var(--accent)); }
+  section[data-view] .card { background: linear-gradient(180deg, color-mix(in srgb, var(--sec, var(--accent)) 9%, rgba(14,24,40,.85)), rgba(8,13,22,.9) 55%);
+    box-shadow: inset 0 2px 0 color-mix(in srgb, var(--sec, var(--accent)) 55%, transparent), 0 10px 30px rgba(0,0,0,.35); }
+  section[data-view] .card:hover { border-color: color-mix(in srgb, var(--sec, var(--accent)) 40%, var(--line)); }
 
   /* brein */
   .brain { position: relative; overflow: hidden; background: radial-gradient(circle at 50% 46%, rgba(40,120,210,.28), rgba(10,30,60,.25) 32%, #03060b 68%); border: 1px solid #0f2034; border-radius: var(--radius); }
@@ -149,6 +169,41 @@
   .jarvis-fab:hover { filter: brightness(1.1); }
   .jarvis-fab:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
   @media (prefers-reduced-motion: no-preference) { .jarvis-fab .dot { animation: jdot 2.4s ease-in-out infinite; } @keyframes jdot { 50% { opacity: .35; } } }
+  /* auto */
+  .car-hero { display: grid; grid-template-columns: 230px 1fr 210px; align-items: center; gap: 10px; padding: 22px; overflow: hidden; position: relative;
+    background: radial-gradient(ellipse at 60% 75%, rgba(45,123,224,.25), transparent 60%), linear-gradient(180deg, #0b1626, #050a12) !important; }
+  .car-hero::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--c-car2), var(--c-car), transparent); opacity: .8; }
+  .car-gauge { position: relative; width: 210px; height: 210px; justify-self: center; }
+  .car-gauge svg { width: 100%; height: 100%; overflow: visible; }
+  .car-gauge .c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .car-gauge .p { font-size: 46px; font-weight: 700; letter-spacing: -.02em; line-height: 1; text-shadow: 0 0 22px rgba(127,208,255,.45); }
+  .car-gauge .r { color: var(--c-car2); font-size: 15px; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .car-gauge .l { color: var(--muted); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; margin-top: 4px; }
+  .car-img { position: relative; min-height: 190px; display: flex; align-items: flex-end; justify-content: center; }
+  .car-img img { max-width: 100%; max-height: 230px; object-fit: contain; filter: drop-shadow(0 18px 22px rgba(0,0,0,.7)) drop-shadow(0 0 30px rgba(45,123,224,.25)); }
+  .car-img .floor { position: absolute; left: 8%; right: 8%; bottom: 0; height: 26px; border-radius: 50%; background: radial-gradient(ellipse, rgba(127,208,255,.25), transparent 70%); filter: blur(4px); }
+  .car-img .ph { color: var(--muted); font-size: 13px; text-align: center; max-width: 320px; align-self: center; }
+  .car-img .ph svg { width: 120px; height: 120px; color: var(--c-car); opacity: .7; display: block; margin: 0 auto 8px; filter: drop-shadow(0 0 16px rgba(45,123,224,.6)); }
+  .car-stats { display: grid; gap: 12px; }
+  .car-stats .s { border-left: 2px solid var(--c-car); padding-left: 10px; }
+  .car-stats .s b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .car-stats .s span { color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+  .car-stats .s.on { border-left-color: var(--good); }
+  .tyres { position: relative; width: 150px; height: 190px; margin: 10px auto 0; }
+  .tyres .body { position: absolute; left: 45px; right: 45px; top: 18px; bottom: 18px; border-radius: 26px 26px 20px 20px; border: 2px solid rgba(127,208,255,.35); background: linear-gradient(180deg, rgba(45,123,224,.18), rgba(45,123,224,.04)); }
+  .tyres .t { position: absolute; width: 44px; text-align: center; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tyres .t i { display: block; width: 12px; height: 26px; border-radius: 4px; margin: 0 auto 3px; background: var(--good); box-shadow: 0 0 10px var(--good); }
+  .tyres .t.warn i { background: var(--warn); box-shadow: 0 0 10px var(--warn); }
+  .tyres .t.none i { background: var(--bar-muted); box-shadow: none; }
+  @media (prefers-reduced-motion: no-preference) {
+    .car-gauge .flow { animation: flow 1.8s ease-in-out infinite; }
+    @keyframes flow { 0%, 100% { opacity: 0; } 50% { opacity: .55; } }
+  }
+  @media (max-width: 760px) {
+    .car-hero { grid-template-columns: 1fr; }
+    .car-img { order: -1; min-height: 140px; }
+    .car-stats { grid-template-columns: 1fr 1fr; }
+  }
   .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #fff; }
 </style>
 <script src="config.js"></script>
@@ -308,7 +363,8 @@
     <section data-view="auto" class="hidden">
       <h2 id="cTitle">Auto</h2>
       <p class="sub" id="cSub">Uit BMW CarData, via de Mac mini. Alleen lezen.</p>
-      <div class="grid">
+      <div class="card car-hero" id="cHero"></div>
+      <div class="grid" style="margin-top:14px">
         <div class="card" id="cBat"></div>
         <div class="card" id="cCharge"></div>
         <div class="card" id="cInfo"></div>
@@ -691,7 +747,7 @@
       (() => {
         const okc = car.status === 'ok';
         const sc = okc ? car.soc : null;
-        return {key: 'auto', icon: 'car', label: 'Auto', color: 'var(--c-car)',
+        return {key: 'auto', icon: 'car', label: 'Auto', color: 'var(--c-car2)',
           value: okc && sc != null ? `${num(sc)}%${car.charging ? ' ⚡' : ''}` : (car.status === 'waiting' ? 'wacht…' : '—'),
           st: !okc || sc == null ? 'none' : sc < 20 ? 'bad' : sc < 35 && !car.plugged ? 'warn' : 'ok',
           tip: ['BMW i5', okc ? `${num(sc)}% · ${num(car.range_km)} km` : (car.message || 'nog niet gekoppeld')],
@@ -1493,42 +1549,89 @@
 
   // ---------- AUTO ----------
   const hmin = (m) => m == null ? '—' : (m >= 60 ? `${Math.floor(m / 60)}u${String(Math.round(m % 60)).padStart(2, '0')}` : `${Math.round(m)} min`);
+  let carImg = null, carImgTried = 0;
+  async function loadCarImage() {
+    // eerst je eigen foto (auto_eigen.jpg/.png in de dashboard-map), anders de foto van je wagen via BMW CarData (auto.png)
+    if (carImg || Date.now() - carImgTried < 10 * 60000 || !CFG.folderId) return carImg;
+    carImgTried = Date.now();
+    try {
+      for (const nm of ['auto_eigen.jpg', 'auto_eigen.png', 'auto.png']) {
+        const q = encodeURIComponent(`name = '${nm}' and '${CFG.folderId}' in parents and trashed = false`);
+        const j = await (await drive(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`)).json();
+        if (j.files && j.files[0]) {
+          const r = await drive(`https://www.googleapis.com/drive/v3/files/${j.files[0].id}?alt=media`);
+          if (r.ok) { carImg = URL.createObjectURL(await r.blob()); return carImg; }
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+  function gauge(c) {
+    const R = 86, C = 2 * Math.PI * R, sweep = 0.75, len = C * sweep, soc = Math.max(0, Math.min(100, c.soc || 0));
+    const col = c.soc == null ? 'var(--muted)' : c.soc < 20 ? 'var(--bad)' : c.soc < 35 ? 'var(--warn)' : 'url(#cg)';
+    const tgt = c.target_soc ? (135 + 270 * c.target_soc / 100) * Math.PI / 180 : null;
+    return `<svg viewBox="-105 -105 210 210" aria-hidden="true">
+      <defs><linearGradient id="cg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1c69d4"/><stop offset="1" stop-color="#7fd0ff"/></linearGradient>
+      <filter id="cglow"><feGaussianBlur stdDeviation="4"/></filter></defs>
+      <g transform="rotate(135)">
+        <circle r="${R}" fill="none" stroke="#12223a" stroke-width="13" stroke-linecap="round" stroke-dasharray="${len} ${C}"/>
+        ${[...Array(28)].map((_, i) => { const a = i / 27 * 270 * Math.PI / 180; return `<line x1="${Math.cos(a) * 70}" y1="${Math.sin(a) * 70}" x2="${Math.cos(a) * (i % 9 ? 66 : 62)}" y2="${Math.sin(a) * (i % 9 ? 66 : 62)}" stroke="#2a3d58" stroke-width="1.5"/>`; }).join('')}
+        <circle r="${R}" fill="none" stroke="${col}" stroke-width="13" stroke-linecap="round" stroke-dasharray="${len * soc / 100} ${C}" filter="url(#cglow)" opacity=".55"/>
+        <circle r="${R}" fill="none" stroke="${col}" stroke-width="11" stroke-linecap="round" stroke-dasharray="${len * soc / 100} ${C}"/>
+        ${c.charging ? `<circle class="flow" r="${R}" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-dasharray="${len * soc / 100} ${C}"/>` : ''}
+      </g>
+      ${tgt != null ? `<line x1="${Math.cos(tgt) * 76}" y1="${Math.sin(tgt) * 76}" x2="${Math.cos(tgt) * 99}" y2="${Math.sin(tgt) * 99}" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>` : ''}
+    </svg>
+    <div class="c"><div class="p">${c.soc != null ? Math.round(c.soc) + '<span style="font-size:22px">%</span>' : '—'}</div>
+      <div class="r">${c.range_km != null ? num(c.range_km) + ' km' : ''}</div><div class="l">${c.charging ? '⚡ laadt' : 'batterij'}</div></div>`;
+  }
   function renderCar(c) {
-    const bc = $('cBat'), cc = $('cCharge'), ic = $('cInfo');
-    [bc, cc, ic].forEach((x) => x.replaceChildren());
+    const hero = $('cHero'), bc = $('cBat'), cc = $('cCharge'), ic = $('cInfo');
+    [hero, bc, cc, ic].forEach((x) => x.replaceChildren());
     $('cChart').replaceChildren();
-    if (c.status !== 'ok') {
-      bc.append(el('div', 'name', 'BMW'), el('div', 'empty', c.message || 'Nog niet gekoppeld. Start bmw_koppelen.bat op de Mac mini.'));
-      return;
+    const b = c.basic || {};
+    $('cTitle').textContent = (b.model ? [b.brand, b.model].filter(Boolean).join(' ') : c.name) || 'Auto';
+    // hero: meter + foto + kerncijfers
+    const g = el('div', 'car-gauge'); g.innerHTML = gauge(c.status === 'ok' ? c : {});
+    const im = el('div', 'car-img');
+    const ph = () => { im.replaceChildren(); const p = el('div', 'ph'); p.innerHTML = iconSvg('car', 120); p.append(c.status === 'ok' ? 'De foto van je wagen verschijnt hier zodra BMW hem doorstuurt. Liever je eigen foto? Zet hem als auto_eigen.jpg in je dashboard-map.' : (c.message || 'Nog niet gekoppeld. Start bmw_koppelen.bat op de Mac mini.')); im.append(p); };
+    ph();
+    loadCarImage().then((u) => { if (u) { im.replaceChildren(); const i = el('img'); i.src = u; i.alt = c.name || 'Je wagen'; im.append(i, el('div', 'floor')); } });
+    const st = el('div', 'car-stats');
+    const stat = (lbl, val, on) => { const d = el('div', 's' + (on ? ' on' : '')); d.append(el('b', null, val), el('span', null, lbl)); st.append(d); };
+    if (c.status === 'ok') {
+      stat('laden', c.charging ? `⚡ ${c.power_kw ? num(c.power_kw, 1) + ' kW' : 'bezig'}` : c.plugged ? 'aan de lader' : 'niet aangesloten', c.charging);
+      stat(c.charging ? 'vol over' : 'laaddoel', c.charging ? hmin(c.time_to_full_min) : (c.target_soc ? num(c.target_soc) + '%' : '—'));
+      stat('kilometerstand', c.odometer_km != null ? num(c.odometer_km) + ' km' : '—');
     }
-    $('cTitle').textContent = c.name || 'Auto';
-    $('cSub').textContent = 'Uit BMW CarData, via de Mac mini. Alleen lezen.' + (c.data_at ? ' Laatste gegevens van je wagen: ' + when(c.data_at) : '');
+    hero.append(g, im, st);
+    $('cSub').textContent = 'Uit BMW CarData, via de Mac mini. Alleen lezen.' + (c.data_at ? ' Laatste gegevens van je wagen: ' + when(c.data_at) + '.' : '') + (b.color ? ` Kleur: ${b.color}.` : '');
+    if (c.status !== 'ok') { bc.append(el('div', 'name', 'Status'), el('div', 'empty', c.message || 'Nog niet gekoppeld.')); return; }
     // batterij
-    bc.append(el('div', 'small muted', 'Batterij'));
-    const big = el('div', 'ring-big', c.soc != null ? num(c.soc) + '%' : '—');
-    big.style.color = c.soc == null ? 'var(--muted)' : c.soc < 20 ? 'var(--bad)' : c.soc < 35 ? 'var(--warn)' : 'var(--c-car)';
-    bc.append(big);
-    const bar = el('div', 'bar'), f = el('span'); f.style.width = Math.max(0, Math.min(100, c.soc || 0)) + '%'; f.style.background = big.style.color; bar.append(f);
-    if (c.target_soc) { const tg = el('span'); tg.style.cssText = `left:${c.target_soc}%;width:2px;background:var(--fg);opacity:.7`; bar.append(tg); }
-    bc.append(bar);
+    bc.append(el('div', 'name', 'Batterij'));
     const dl = el('dl', 'kv');
-    [['Actieradius', c.range_km != null ? num(c.range_km) + ' km' : '—'], ['Laaddoel', c.target_soc ? num(c.target_soc) + '%' : '—'],
-     ['Batterij', c.battery_kwh ? num(c.battery_kwh, 1) + ' kWh' : '—']].forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, v)));
+    [['Laadtoestand', c.soc != null ? num(c.soc) + '%' : '—'], ['Actieradius', c.range_km != null ? num(c.range_km) + ' km' : '—'], ['Laaddoel', c.target_soc ? num(c.target_soc) + '%' : '—'],
+     ['Capaciteit', c.battery_kwh ? num(c.battery_kwh, 1) + ' kWh' : '—'], ['Verbruik', c.consumption != null ? String(c.consumption) : '—']].forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, v)));
     bc.append(dl);
     // laden
-    cc.append(el('div', 'small muted', 'Laden'));
+    cc.append(el('div', 'name', 'Laden'));
     cc.append(el('div', 'big', c.charging ? '⚡ Laadt' : c.plugged ? 'Aan de lader' : 'Niet aangesloten'));
     const dl2 = el('dl', 'kv');
     [['Vermogen', c.charging && c.power_kw ? num(c.power_kw, 1) + ' kW' : '—'], ['Vol over', c.charging ? hmin(c.time_to_full_min) : '—'],
      ['Status', c.charging_status || '—']].forEach(([k, v]) => dl2.append(el('dt', null, k), el('dd', null, v)));
     cc.append(dl2);
-    // info
-    ic.append(el('div', 'small muted', 'Kilometerstand'), el('div', 'big', c.odometer_km != null ? num(c.odometer_km) + ' km' : '—'));
-    const dl3 = el('dl', 'kv');
-    const tp = (c.tyres_kpa || []).map((x) => x == null ? '—' : num(x / 100, 1)).join(' · ');
-    [['Bandenspanning (bar)', (c.tyres_kpa || []).some((x) => x != null) ? tp : '—'], ['Verbruik', c.consumption != null ? String(c.consumption) : '—'],
-     ['Gegevens', `${c.keys || 0} waarden`]].forEach(([k, v]) => dl3.append(el('dt', null, k), el('dd', null, v)));
-    ic.append(dl3);
+    // banden (bovenaanzicht)
+    ic.append(el('div', 'name', 'Bandenspanning'), el('div', 'small muted', 'in bar, links = voor'));
+    const ty = el('div', 'tyres'); ty.append(el('div', 'body'));
+    const pos = [[0, 6], [106, 6], [0, 120], [106, 120]];
+    (c.tyres_kpa || [null, null, null, null]).forEach((v, i) => {
+      const tg = (c.tyres_target_kpa || [])[i];
+      const t = el('div', 't ' + (v == null ? 'none' : tg && Math.abs(v - tg) > 20 ? 'warn' : ''));
+      t.style.left = pos[i][0] + 'px'; t.style.top = pos[i][1] + 'px';
+      t.append(el('i'), v == null ? '—' : num(v / 100, 1));
+      ty.append(t);
+    });
+    ic.append(ty);
     if (c.location) { const a = el('a', 'small', 'Toon op kaart'); a.href = `https://www.google.com/maps?q=${c.location.lat},${c.location.lon}`; a.target = '_blank'; a.rel = 'noopener'; a.style.color = 'var(--accent)'; ic.append(a); }
     // grafiek
     const hist = (c.history || []).filter((h) => h.soc != null).map((h) => ({t: new Date(h.t), v: h.soc}));
@@ -1538,10 +1641,13 @@
     const x = d3.scaleTime().domain(d3.extent(hist, (p) => p.t)).range([mg.l, W2 - mg.r]);
     const y = d3.scaleLinear().domain([0, 100]).range([H - mg.b, mg.t]);
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W2} ${H}`).attr('role', 'img').attr('aria-label', 'Batterijverloop');
+    const gr = svg.append('defs').append('linearGradient').attr('id', 'carea').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 1);
+    gr.append('stop').attr('offset', 0).attr('stop-color', '#2d7be0').attr('stop-opacity', .45); gr.append('stop').attr('offset', 1).attr('stop-color', '#2d7be0').attr('stop-opacity', 0);
     [0, 50, 100].forEach((v) => { svg.append('line').attr('x1', mg.l).attr('x2', W2 - mg.r).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', 'var(--line)');
       svg.append('text').attr('x', mg.l - 4).attr('y', y(v) + 3).attr('text-anchor', 'end').text(v + '%'); });
-    svg.append('path').datum(hist).attr('fill', 'none').attr('stroke', 'var(--c-car)').attr('stroke-width', 1.8).attr('d', d3.line().x((p) => x(p.t)).y((p) => y(p.v)));
-    svg.selectAll('circle').data(hist).join('circle').attr('r', 2.5).attr('cx', (p) => x(p.t)).attr('cy', (p) => y(p.v)).attr('fill', 'var(--c-car)');
+    svg.append('path').datum(hist).attr('fill', 'url(#carea)').attr('d', d3.area().x((p) => x(p.t)).y0(y(0)).y1((p) => y(p.v)));
+    svg.append('path').datum(hist).attr('fill', 'none').attr('stroke', 'var(--c-car2)').attr('stroke-width', 2).attr('d', d3.line().x((p) => x(p.t)).y((p) => y(p.v)));
+    svg.selectAll('circle').data(hist).join('circle').attr('r', 2.5).attr('cx', (p) => x(p.t)).attr('cy', (p) => y(p.v)).attr('fill', 'var(--c-car2)');
     x.ticks(5).forEach((tk) => svg.append('text').attr('x', x(tk)).attr('y', H - 8).attr('text-anchor', 'middle').text(tk.toLocaleDateString('nl-BE', {day: 'numeric', month: 'short'})));
   }
 
