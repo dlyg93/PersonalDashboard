@@ -1633,6 +1633,16 @@
     if (!ids.length) return;
     ids.forEach((id) => haPending.set(id, {on, at: Date.now()}));
     if (lastData) render(lastData);
+    const hook = lastData && lastData.home && lastData.home.webhook;
+    if (hook) {
+      // snelle route: rechtstreeks naar je Home Assistant (de automatisering daar schakelt enkel toegelaten lichten)
+      try {
+        await fetch(hook, {method: 'POST', mode: 'no-cors', body: new URLSearchParams({entity_id: ids.join(','), on: on ? '1' : '0'})});
+        clearInterval(timer); timer = setInterval(() => { if (!document.hidden) load(); }, 15000);
+        setTimeout(schedule, 3 * 60000);
+        return;
+      } catch (e) { /* niet bereikbaar: dan via de Mac mini */ }
+    }
     try {
       for (const id of ids) {
         const cid = 'cmd-' + new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 7);
@@ -1750,7 +1760,8 @@
       sw.onclick = () => switchLight([l.id], !l.on);
       r.append(b, nm, sw); list.append(r);
     });
-    lc.append(list, el('div', 'small muted', 'Schakelen gaat via de Mac mini: reken op ±1 minuut. Sneller: vraag het aan Jarvis.'));
+    lc.append(list, el('div', 'small muted', hm.webhook ? 'Schakelt meteen via je Home Assistant; de stand hier wordt elke minuut bijgewerkt.'
+      : 'Schakelen gaat via de Mac mini: reken op ±1 minuut.' + (hm.webhook_error ? ' ' + hm.webhook_error : '')));
     // grafiek
     const ser = (e.series || []).map(([t, w]) => ({t: new Date(t), v: w}));
     const box = $('tChart');
