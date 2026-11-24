@@ -212,8 +212,26 @@
   .home-alert .ico { font-size: 22px; }
   .home-alert .txt { flex: 1 1 260px; }
   .home-alert .btn { background: var(--warn); color: #1a1205; }
-  .lights { margin-top: 8px; }
-  .lt { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line); }
+  body.wide .wrap { max-width: 1640px; }
+  .home-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .home-main { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; margin-top: 14px; align-items: start; }
+  .home-side { display: grid; gap: 14px; min-width: 0; }
+  @media (max-width: 1000px) { .home-main { grid-template-columns: 1fr; } }
+  .cvr { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .cvr:last-child { border-bottom: 0; }
+  .gar { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .gar .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .scenes { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-top: 10px; }
+  .scene { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel2);
+    color: var(--fg); font-weight: 600; cursor: pointer; transition: all .15s; }
+  .scene:hover { border-color: var(--c-home); background: rgba(52,211,153,.08); }
+  .scene.main { background: rgba(52,211,153,.16); border-color: rgba(52,211,153,.55); grid-column: 1 / -1; }
+  .scene.sent { border-color: var(--good); color: var(--good); }
+  .lights { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+  .lt { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel2); cursor: pointer; transition: border-color .2s, background .2s; }
+  .lt:hover { border-color: #26405f; }
+  .lt.on { border-color: rgba(250,204,21,.4); background: linear-gradient(135deg, rgba(250,204,21,.09), var(--panel2)); }
+  .lt.pend .sw { opacity: .7; }
   .lt .bulb { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #142033; color: var(--muted); flex: none; transition: all .2s; }
   .lt.on .bulb { background: rgba(250,204,21,.18); color: #facc15; box-shadow: 0 0 16px rgba(250,204,21,.45); }
   .lt .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -222,12 +240,12 @@
   .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #9fb3cc; transition: transform .2s, background .2s; }
   .sw[aria-checked=true] { background: rgba(52,211,153,.35); border-color: var(--c-home); }
   .sw[aria-checked=true]::after { transform: translateX(20px); background: #fff; }
-  .sw.busy { opacity: .55; cursor: progress; }
+  .sw.busy { opacity: .75; }
   .sw:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
   .presence { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
   .presence .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--good); box-shadow: 0 0 12px var(--good); }
   .presence .dot.away { background: var(--c-agenda); box-shadow: 0 0 12px var(--c-agenda); }
-  #hMap { height: 360px; border-radius: 10px; margin-top: 10px; background: #0a1220; z-index: 0; }
+  #hMap { height: 420px; border-radius: 10px; margin-top: 10px; background: #0a1220; z-index: 0; }
   .leaflet-container { font: inherit; }
   .pin { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; border: 2px solid #fff; box-shadow: 0 4px 14px rgba(0,0,0,.5); }
   .pin svg { width: 18px; height: 18px; }
@@ -397,20 +415,26 @@
     <section data-view="thuis" class="hidden">
       <h2>Thuis</h2>
       <p class="sub" id="tSub">Uit Home Assistant, via de Mac mini.</p>
-      <div class="grid">
+      <div class="home-top">
         <div class="card" id="tMe"></div>
         <div class="card" id="tPower"></div>
+        <div class="card" id="tScenes"></div>
+        <div class="card" id="tCovers"></div>
+      </div>
+      <div class="home-main">
         <div class="card" id="tLights"></div>
-      </div>
-      <div class="card" style="margin-top:14px">
-        <div class="card-top"><span class="name">Waar zijn jij en je auto?</span><span class="small muted" id="tMapInfo"></span></div>
-        <div id="hMap"></div>
-        <div class="map-legend" id="tLegend"></div>
-      </div>
-      <div class="card" style="margin-top:14px">
-        <div class="name">Stroomverbruik, laatste 24 uur</div>
-        <div class="small muted">Uit je HomeWizard P1-meter. Onder nul = teruglevering.</div>
-        <div class="chart" id="tChart"></div>
+        <div class="home-side">
+          <div class="card">
+            <div class="card-top"><span class="name">Waar zijn jij en je auto?</span><span class="small muted" id="tMapInfo"></span></div>
+            <div id="hMap"></div>
+            <div class="map-legend" id="tLegend"></div>
+          </div>
+          <div class="card">
+            <div class="name">Stroomverbruik, laatste 24 uur</div>
+            <div class="small muted">Uit je HomeWizard P1-meter. Onder nul = teruglevering.</div>
+            <div class="chart" id="tChart"></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -633,6 +657,7 @@
     document.querySelectorAll('[data-view]').forEach((s) => s.classList.toggle('hidden', s.dataset.view !== view));
     document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('on', a.dataset.v === view));
     $('lede').classList.toggle('hidden', view !== 'brein');
+    document.body.classList.toggle('wide', view === 'thuis');
     if (lastData) render(lastData);
     updateActionBar();
   }
@@ -1622,27 +1647,46 @@
   }
 
   // ---------- THUIS ----------
-  const haPending = new Map();   // entity_id -> {on, at}
+  // Een licht blijft altijd bedienbaar: we tonen meteen de nieuwe stand ("verwacht") tot de echte stand uit Home Assistant binnenkomt.
+  const haPending = new Map();   // entity_id -> {on, at, fast}
   function lightState(l) {
     const p = haPending.get(l.id);
-    if (p && (p.on === l.on || Date.now() - p.at > 4 * 60000)) { haPending.delete(l.id); return {on: l.on, busy: false}; }
+    if (p && (p.on === l.on || Date.now() - p.at > (p.fast ? 100 : 240) * 1000)) { haPending.delete(l.id); return {on: l.on, busy: false}; }
     return p ? {on: p.on, busy: true} : {on: l.on, busy: false};
   }
-  async function switchLight(ids, on) {
-    ids = ids.filter((id) => !haPending.has(id));
-    if (!ids.length) return;
-    ids.forEach((id) => haPending.set(id, {on, at: Date.now()}));
-    if (lastData) render(lastData);
+  // één opdracht naar de snelle route (webhook van Home Assistant). Geeft true als het verstuurd is.
+  async function sendHook(ids, on) {
     const hook = lastData && lastData.home && lastData.home.webhook;
-    if (hook) {
-      // snelle route: rechtstreeks naar je Home Assistant (de automatisering daar schakelt enkel toegelaten lichten)
-      try {
-        await fetch(hook, {method: 'POST', mode: 'no-cors', body: new URLSearchParams({entity_id: ids.join(','), on: on ? '1' : '0'})});
-        clearInterval(timer); timer = setInterval(() => { if (!document.hidden) load(); }, 15000);
-        setTimeout(schedule, 3 * 60000);
-        return;
-      } catch (e) { /* niet bereikbaar: dan via de Mac mini */ }
-    }
+    if (!hook) return false;
+    try {
+      await fetch(hook, {method: 'POST', mode: 'no-cors', body: new URLSearchParams({entity_id: ids.join(','), on: on ? '1' : '0'})});
+      clearInterval(timer); timer = setInterval(() => { if (!document.hidden) load(); }, 15000);
+      setTimeout(schedule, 3 * 60000);
+      return true;
+    } catch (e) { return false; }   // niet bereikbaar: dan via de Mac mini
+  }
+  async function switchScene(id, btn) {
+    if (btn) { btn.classList.add('sent'); setTimeout(() => btn.classList.remove('sent'), 3000); }
+    if (await sendHook([id], true)) return;
+    try {
+      const cid = 'cmd-' + new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 7);
+      await sendCommand(cid, {id: cid, action: 'ha_scene', confirmed: true, created_at: new Date().toISOString(), entity_id: id, source: location.href});
+      clearInterval(timer); timer = setInterval(() => { if (!document.hidden) load(); }, 15000);
+      setTimeout(schedule, 5 * 60000);
+    } catch (e) { showAlert('Scène starten mislukt: ' + e.message, true); }
+  }
+  async function sendGarage() {
+    const cid = 'cmd-' + new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 7);
+    await sendCommand(cid, {id: cid, action: 'ha_garage', confirmed: true, created_at: new Date().toISOString(), source: location.href});
+    clearInterval(timer); timer = setInterval(() => { if (!document.hidden) load(); }, 15000);
+    setTimeout(schedule, 4 * 60000);
+  }
+  async function switchLight(ids, on) {
+    if (!ids.length) return;
+    const fast = !!(lastData && lastData.home && lastData.home.webhook);
+    ids.forEach((id) => haPending.set(id, {on, at: Date.now(), fast}));
+    if (lastData) render(lastData);
+    if (await sendHook(ids, on)) return;
     try {
       for (const id of ids) {
         const cid = 'cmd-' + new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 7);
@@ -1688,21 +1732,27 @@
     hLayer.clearLayers();
     const pin = (cls, icon, size = 34) => L.divIcon({className: '', html: `<div class="pin ${cls}">${iconSvg(icon, 18)}</div>`, iconSize: [size, size], iconAnchor: [size / 2, size / 2]});
     const pts = [];
+    // klopt de locatie van je iPhone niet (al dagen "niet thuis"), dan telt ze niet mee voor het kaartvenster: anders zoomt de kaart uit tot je auto een stipje is
+    const meOk = me && !(hm.me && hm.me.unreliable);
     if (home) L.marker([home.lat, home.lon], {icon: pin('home', 'home', 28), title: 'Thuis'}).addTo(hLayer).bindTooltip('Thuis');
-    if (cl) { pts.push([cl.lat, cl.lon]); L.marker([cl.lat, cl.lon], {icon: pin('car', 'car'), title: 'Je auto'}).addTo(hLayer).bindTooltip('Je BMW' + (cl.at ? ' · ' + when(cl.at) : '')); }
+    if (cl) { pts.push([cl.lat, cl.lon]); L.marker([cl.lat, cl.lon], {icon: pin('car', 'car'), title: 'Je auto', zIndexOffset: 500}).addTo(hLayer).bindTooltip('Je BMW' + (cl.at ? ' · ' + when(cl.at) : '')); }
     if (me) {
-      pts.push([me.lat, me.lon]);
+      if (meOk) pts.push([me.lat, me.lon]);
       if (me.accuracy_m && me.accuracy_m > 30) L.circle([me.lat, me.lon], {radius: me.accuracy_m, color: '#0ea5e9', weight: 1, fillOpacity: .08}).addTo(hLayer);
       L.marker([me.lat, me.lon], {icon: pin('me', 'me'), title: 'Jij'}).addTo(hLayer).bindTooltip('Jij' + (hm.measured_at ? ' · ' + when(hm.measured_at) : ''));
     }
     if (!hFitted && (pts.length || home)) {
       const all = pts.concat(home ? [[home.lat, home.lon]] : []);
-      if (all.length === 1) hMap.setView(all[0], 15); else hMap.fitBounds(all, {padding: [40, 40], maxZoom: 16});
+      hMap.invalidateSize();
+      const bb = L.latLngBounds(all);
+      if (all.length === 1 || bb.getSouthWest().distanceTo(bb.getNorthEast()) < 150) hMap.setView(bb.getCenter(), 16);
+      else hMap.fitBounds(all, {padding: [40, 40], maxZoom: 16});
       hFitted = true;
     }
     $('tMapInfo').textContent = cl && cl.at ? 'auto: ' + when(cl.at) : '';
     const item = (label, val) => { const d = el('span'); d.append(el('b', null, label + ': '), val); leg.append(d); };
-    item('Jij', me ? (hm.me.home ? 'thuis' : home ? km(dist(me, home)) + ' van thuis' : 'onderweg')
+    item('Jij', me ? (hm.me.unreliable ? (home ? km(dist(me, home)) + ' van thuis, maar dat klopt waarschijnlijk niet: thuiszone en iPhone-tracker in Home Assistant nakijken' : 'locatie klopt waarschijnlijk niet')
+      : hm.me.home ? 'thuis' : home ? km(dist(me, home)) + ' van thuis' : 'onderweg')
       : (hm.status === 'ok' ? 'geen locatie (Home Assistant-app op je iPhone, locatie "Altijd")' : '—'));
     item('Je auto', cl ? (home ? (dist(cl, home) < 0.15 ? 'thuis' : km(dist(cl, home)) + ' van thuis') : 'op de kaart') + (me ? ' · ' + km(dist(cl, me)) + ' van jou' : '')
       : (car.status === 'ok' ? 'nog geen locatie van BMW (komt bij de volgende opvraging)' : '—'));
@@ -1711,8 +1761,8 @@
     leg.append(fit);
   }
   function renderHome(hm, car) {
-    const mc = $('tMe'), pc = $('tPower'), lc = $('tLights');
-    [mc, pc, lc].forEach((x) => x.replaceChildren());
+    const mc = $('tMe'), pc = $('tPower'), lc = $('tLights'), sc = $('tScenes'), cv = $('tCovers');
+    [mc, pc, lc, sc, cv].forEach((x) => x.replaceChildren());
     $('tChart').replaceChildren();
     renderMap(hm, car);
     if (hm.status !== 'ok') {
@@ -1746,18 +1796,56 @@
     const top = el('div', 'card-top'); top.append(el('span', 'name', 'Lichten'), el('span', 'small muted', `${nOn} van ${lights.length} aan`));
     lc.append(top);
     if (nOn) {
-      const off = el('button', 'btn ghost small', 'Alles uit'); off.type = 'button'; off.style.marginTop = '6px';
-      off.onclick = () => switchLight(st.filter((l) => l.on && !l.busy).map((l) => l.id), false); lc.append(off);
+      const off = el('button', 'btn ghost small', 'Alle lichten uit'); off.type = 'button'; off.style.marginTop = '6px';
+      off.onclick = () => switchLight(st.filter((l) => l.on).map((l) => l.id), false); lc.append(off);
     }
+    // rolluiken (enkel bekijken) en garagepoort (met bevestiging)
+    cv.append(el('div', 'name', 'Rolluiken en poort'));
+    const covs = hm.covers || [];
+    const CS = {closed: 'dicht', open: 'open', opening: 'gaat open…', closing: 'gaat dicht…'};
+    if (!covs.length) cv.append(el('div', 'small muted', 'Geen rolluiken gevonden.'));
+    covs.forEach((c) => { const r = el('div', 'cvr'); r.append(el('span', null, c.name), el('b', c.state === 'closed' ? 'muted' : 'warn', (CS[c.state] || c.state) + (c.position != null && c.state !== 'closed' ? ` · ${c.position}%` : ''))); cv.append(r); });
+    cv.append(el('div', 'small muted', 'Rolluiken zijn enkel om te bekijken.'));
+    if (hm.garage) {
+      const g = el('div', 'gar'), row = el('div', 'row');
+      const stt = el('span'); stt.append('Garagepoort: ', el('b', hm.garage.state === 'open' ? 'warn' : hm.garage.state === 'dicht' ? 'good' : 'muted', hm.garage.state || 'stand onbekend'));
+      row.append(stt);
+      const btn = el('button', 'btn ghost small', 'Poort bedienen'); btn.type = 'button';
+      let arm = null;
+      btn.onclick = () => {
+        if (!arm) {
+          btn.textContent = hm.garage.state === 'open' ? 'Zeker? Poort sluiten' : 'Zeker? Poort openen'; btn.classList.remove('ghost'); btn.classList.add('danger');
+          arm = setTimeout(() => { arm = null; btn.textContent = 'Poort bedienen'; btn.classList.add('ghost'); btn.classList.remove('danger'); }, 6000);
+          return;
+        }
+        clearTimeout(arm); arm = null; btn.disabled = true; btn.textContent = 'Versturen…';
+        sendGarage().then(() => { btn.textContent = 'Verstuurd, ±1 minuut'; }, (e) => { btn.disabled = false; btn.textContent = 'Poort bedienen'; showAlert('Poort bedienen mislukt: ' + e.message, true); });
+      };
+      row.append(btn); g.append(row);
+      g.append(el('div', 'small muted', 'Stand via de UniFi-sensor' + (hm.garage.since ? ' · sinds ' + when(hm.garage.since) : '') + '. De poort reageert binnen ±1 minuut.'));
+      cv.append(g);
+    }
+    // scènes (bv. "Alles uit" van Qbus)
+    const scenes = hm.scenes || [];
+    sc.append(el('div', 'name', 'Scènes'), el('div', 'small muted', 'Eén druk op de knop, zoals in je Qbus-app.'));
+    if (!scenes.length) sc.append(el('div', 'empty', hm.scenes ? 'Geen scènes gevonden.' : 'Scènes verschijnen na de volgende meting.'));
+    const sl = el('div', 'scenes');
+    scenes.forEach((x) => {
+      const b = el('button', 'scene' + (/alles uit/i.test(x.name) ? ' main' : '')); b.type = 'button';
+      b.append(el('span', null, /alles uit/i.test(x.name) ? '⏻' : '▶'), el('span', null, x.name));
+      b.onclick = () => switchScene(x.id, b);
+      sl.append(b);
+    });
+    sc.append(sl);
     const list = el('div', 'lights');
     if (!lights.length) list.append(el('div', 'empty', 'Geen lichten gevonden.'));
     st.forEach((l) => {
-      const r = el('div', 'lt' + (l.on ? ' on' : ''));
+      const r = el('div', 'lt' + (l.on ? ' on' : '') + (l.busy ? ' pend' : ''));
       const b = el('span', 'bulb'); b.innerHTML = iconSvg(l.kind === 'switch' ? 'plug' : 'bulb', 16);
-      const nm = el('div', 'nm', l.name); if (l.busy) nm.append(el('small', null, l.on ? 'gaat aan…' : 'gaat uit…'));
+      const nm = el('div', 'nm', l.name); if (l.busy) nm.append(el('small', null, l.on ? 'wordt aangezet…' : 'wordt uitgezet…'));
       const sw = el('button', 'sw' + (l.busy ? ' busy' : '')); sw.type = 'button'; sw.setAttribute('role', 'switch'); sw.setAttribute('aria-checked', String(l.on));
-      sw.setAttribute('aria-label', l.name + (l.on ? ' uitzetten' : ' aanzetten')); sw.disabled = l.busy;
-      sw.onclick = () => switchLight([l.id], !l.on);
+      sw.setAttribute('aria-label', l.name + (l.on ? ' uitzetten' : ' aanzetten'));
+      r.onclick = () => switchLight([l.id], !l.on);   // de hele tegel is klikbaar (de schakelaar zit erin)
       r.append(b, nm, sw); list.append(r);
     });
     lc.append(list, el('div', 'small muted', hm.webhook ? 'Schakelt meteen via je Home Assistant; de stand hier wordt elke minuut bijgewerkt.'
@@ -1788,9 +1876,14 @@
   // ---------- AUTO ----------
   const hmin = (m) => m == null ? '—' : (m >= 60 ? `${Math.floor(m / 60)}u${String(Math.round(m % 60)).padStart(2, '0')}` : `${Math.round(m)} min`);
   let carImg = null, carImgTried = 0;
+  const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const toDataUrl = (url) => fetch(url).then((r) => r.blob()).then((b) => new Promise((ok, no) => { const f = new FileReader(); f.onload = () => ok(f.result); f.onerror = no; f.readAsDataURL(b); }));
   async function loadCarImage() {
+    // de foto wordt op dit toestel onthouden (en maximaal 1x per dag opnieuw opgehaald), zodat hij meteen zichtbaar is
+    if (!carImg) carImg = lsGet('pd_carimg');
+    if (carImg && Date.now() - (+lsGet('pd_carimg_at') || 0) < 24 * 3600000) return carImg;
     // eerst je eigen foto (auto_eigen.jpg/.png in de dashboard-map), anders de foto van je wagen via BMW CarData (auto.png)
-    if (carImg || Date.now() - carImgTried < 10 * 60000 || !CFG.folderId) return carImg;
+    if (Date.now() - carImgTried < 10 * 60000 || !CFG.folderId) return carImg;
     carImgTried = Date.now();
     try {
       for (const nm of ['auto_eigen.jpg', 'auto_eigen.png', 'auto.png']) {
@@ -1798,11 +1891,15 @@
         const j = await (await drive(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`)).json();
         if (j.files && j.files[0]) {
           const r = await drive(`https://www.googleapis.com/drive/v3/files/${j.files[0].id}?alt=media`);
-          if (r.ok) { carImg = URL.createObjectURL(await r.blob()); if (nm === 'auto.png') carImg = await cutout(carImg); return carImg; }
+          if (r.ok) {
+            let u = URL.createObjectURL(await r.blob()); if (nm === 'auto.png') u = await cutout(u);
+            try { const du = await toDataUrl(u); localStorage.setItem('pd_carimg', du); localStorage.setItem('pd_carimg_at', String(Date.now())); u = du; } catch (e) { /* te groot om te onthouden: dan elke keer opnieuw */ }
+            carImg = u; return carImg;
+          }
         }
       }
     } catch (e) {}
-    return null;
+    return carImg;
   }
   // de BMW-foto heeft een witte achtergrond: wit vanaf de randen doorzichtig maken (flood fill), zodat de wagen op het donkere thema staat
   async function cutout(url) {
